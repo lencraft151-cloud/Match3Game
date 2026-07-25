@@ -122,7 +122,8 @@
 
     button.setAttribute('aria-label',
       'Level ' + level + (button.disabled ? ' (gesperrt)'
-        : done ? ' (geschafft, ' + earned + ' von 3 Sternen)' : ' (jetzt spielen)'));
+        : done ? ' (geschafft, ' + earned + ' von 3 Sternen — nochmal spielen)'
+               : ' (jetzt spielen)'));
 
     wrap.appendChild(button);
 

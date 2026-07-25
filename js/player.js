@@ -25,21 +25,23 @@
       name: 'Hammer',
       icon: '🔨',
       price: CONFIG.PRICE_HAMMER,
-      hint: 'Zerschlägt einen beliebigen Stein — auch einen Fels.'
+      hint: 'Tippe ein Feld an: es und die vier Nachbarn fliegen raus, Felsen inklusive.'
     },
     shuffle: {
       key: 'shuffle',
       name: 'Mischen',
       icon: '🔀',
       price: CONFIG.PRICE_SHUFFLE,
-      hint: 'Würfelt das ganze Feld neu durch.'
+      hint: 'Würfelt das Feld neu und sorgt für mindestens ' +
+        CONFIG.POWERUP_SHUFFLE_MIN_MOVES + ' mögliche Züge.'
     },
     moves: {
       key: 'moves',
       name: 'Extra-Züge',
       icon: '➕',
       price: CONFIG.PRICE_MOVES,
-      hint: '+' + CONFIG.POWERUP_EXTRA_MOVES + ' Züge mitten im Level.'
+      hint: 'Legt ' + CONFIG.POWERUP_EXTRA_MOVES +
+        ' Züge drauf. Kostet selbst keinen Zug.'
     }
   };
 

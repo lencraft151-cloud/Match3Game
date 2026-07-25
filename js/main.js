@@ -34,18 +34,16 @@
 
   /* ------------------------------------------------------------ Spielstand */
 
-  /* Hoechstes freigeschaltetes Level und die Sterne je Level. Beides liegt
-     unter demselben Schluessel wie bisher, damit alte Spielstaende nicht
-     verloren gehen — fruehere Versionen speicherten dort nur eine Zahl. */
+  /* Hoechstes freigeschaltetes Level und die Sterne je Level.
+
+     Der Schluessel traegt bewusst die Version v2: der Fortschritt aelterer
+     Staende wird damit nicht uebernommen, jeder faengt wieder bei Level 1 an.
+     Kristalle, Leben und Power-Ups haengen an einem eigenen Schluessel und
+     bleiben erhalten. */
   var progressState = loadProgress();
 
   function loadProgress() {
     var raw = Utils.storeGet(CONFIG.STORE_PROGRESS, null);
-
-    /* Alte Version: nur die Levelnummer. */
-    if (typeof raw === 'number') {
-      return { unlocked: Math.max(1, Math.floor(raw)), stars: {} };
-    }
 
     if (raw && typeof raw === 'object') {
       return {
@@ -203,10 +201,11 @@
     Map.scrollToCurrent(progressState.unlocked, !!scrollSmooth);
   }
 
-  /* Knoten auf der Karte angetippt. */
+  /* Knoten auf der Karte angetippt. Geschaffte Level lassen sich wiederholen,
+     um fehlende Sterne nachzuholen. */
   function openLevelStart(level) {
     activeLevel = level;
-    UI.showLevelStart(Levels.get(level));
+    UI.showLevelStart(Levels.get(level), level < progressState.unlocked);
   }
 
   function beginLevel(level) {
@@ -309,12 +308,19 @@
   function usePower(key) {
     if (!game.acceptsInput()) return;
 
+    /* Erneutes Antippen entschaerft den Hammer wieder. */
     if (key === 'hammer' && game.armed === 'hammer') {
       game.disarm();
       return;
     }
 
-    if (Player.countOf(key) <= 0) return;
+    /* Leerer Vorrat darf nicht einfach wirkungslos verpuffen — sonst wirkt
+       der Knopf kaputt statt leer. */
+    if (Player.countOf(key) <= 0) {
+      UI.setHint(Player.ITEMS[key].name + ' aufgebraucht — im Shop nachkaufen für ' +
+        Player.ITEMS[key].price + ' Kristalle', true);
+      return;
+    }
 
     if (key === 'hammer') game.armHammer();
     else if (key === 'shuffle') game.usePowerShuffle();

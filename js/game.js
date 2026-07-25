@@ -61,6 +61,12 @@
 
   var HINT_DELAY = 5;
 
+  /* So viele Schritte darf das Zug-Finale hoechstens dauern. */
+  var FINALE_STEPS = 8;
+
+  /* Wie stark Aufloesen und Nachrutschen im Finale beschleunigt werden. */
+  var FINALE_SPEED = 0.35;
+
   /* ====================================================================== */
 
   function Game(canvas, hooks) {
@@ -84,6 +90,9 @@
     this.progress = Goals.newProgress(7);
     this.cascade = 0;
     this.finale = null;    /* laufendes Zug-Finale nach dem Sieg */
+    /* Tempofaktor fuer Aufloesen und Nachrutschen. Im Zug-Finale laeuft alles
+       schneller ab, sonst zieht sich der Abschluss ewig. */
+    this.speed = 1;
 
     this.phase = PHASE.DONE;
     this.phaseT = 0;
@@ -169,6 +178,7 @@
     this.progress = Goals.newProgress(this.def.colors);
     this.cascade = 0;
     this.finale = null;
+    this.speed = 1;
 
     this.selected = null;
     this.cursor = null;
@@ -388,7 +398,7 @@
     this.armed = 'hammer';
     this.selected = null;
     this.hint = null;
-    this.say('Tippe den Stein an, den du zerschlagen willst');
+    this.say('Hammer bereit — tippe ein Feld an, das Kreuz drumherum fliegt mit');
     if (this.hooks.onArmChange) this.hooks.onArmChange('hammer');
     return true;
   };
@@ -400,28 +410,40 @@
     if (this.hooks.onArmChange) this.hooks.onArmChange(null);
   };
 
+  /* Der Hammer raeumt ein Kreuz: das angetippte Feld und seine vier direkten
+     Nachbarn. Felsen im Kreuz zerbrechen automatisch — resolveBlast raeumt
+     jeden Fels, der an ein geraeumtes Feld grenzt. */
   Game.prototype.useHammer = function (idx) {
-    var gem = this.board.cells[idx];
-    if (!gem) return false;
+    if (!this.board.cells[idx]) return false;
 
     this.selected = null;
     this.hint = null;
     this.idleTime = 0;
 
+    var self = this;
+    var cross = [idx].concat(this.board.neighbors4(idx));
+
     var pos = this.cellCenter(this.board.colOf(idx), this.board.rowOf(idx));
-    this.fx.ring(pos.x, pos.y, this.cell * 1.9, '#ffcc4d', 5);
-    this.addShake(8);
+    this.fx.ring(pos.x, pos.y, this.cell * 2.4, '#ffcc4d', 6);
+    this.fx.burst(pos.x, pos.y, '#ffcc4d', 18, 1.2);
+    this.addShake(9);
     Audio.explode();
 
-    if (gem.kind === 'blocker') {
-      /* resolveBlast raeumt Felsen bewusst nur ueber die Nachbarschaftsregel —
-         der Hammer schlaegt ihn direkt weg. */
-      this.cascade = 1;
-      this.startClear({ cleared: [], blockers: [idx], activations: [] }, [], null);
-    } else {
+    /* Steine im Kreuz gehen ueber die normale Aufloesung, damit getroffene
+       Spezialsteine mitzuenden. */
+    var gems = cross.filter(function (i) {
+      var g = self.board.cells[i];
+      return g && g.kind !== 'blocker';
+    });
+
+    if (gems.length) {
       this.cascade = 0;
-      this.pendingSwapSeeds = { a: idx, b: idx, rainbow: [idx], targets: {} };
+      this.pendingSwapSeeds = { a: idx, b: idx, rainbow: gems, targets: {} };
       this.resolve();
+    } else {
+      /* Nur Felsen getroffen — die raeumt resolveBlast nicht von allein. */
+      this.cascade = 1;
+      this.startClear({ cleared: [], blockers: cross, activations: [] }, [], null);
     }
 
     this.spent('hammer');
@@ -431,7 +453,8 @@
   Game.prototype.usePowerShuffle = function () {
     if (!this.acceptsInput()) return false;
     this.disarm();
-    this.startShuffle('Feld neu gemischt');
+    this.startShuffle('Feld neu gemischt — jetzt gibt es wieder Zuege',
+      CONFIG.POWERUP_SHUFFLE_MIN_MOVES);
     this.spent('shuffle');
     return true;
   };
@@ -457,6 +480,7 @@
     this.fx.ring(mid.x, mid.y, this.cell * 3.2, '#7ee787', 4);
     Audio.specialBorn();
 
+    this.say(extra + ' Züge dazu — jetzt sind es ' + this.movesLeft);
     this.emitStats();
     return true;
   };
@@ -772,8 +796,8 @@
         gem: gem,
         from: move.fromRow,
         to: move.toRow,
-        delay: order * 0.018,
-        duration: T_FALL_BASE + distance * T_FALL_PER_ROW
+        delay: order * 0.018 * self.speed,
+        duration: (T_FALL_BASE + distance * T_FALL_PER_ROW) * self.speed
       });
     });
 
@@ -835,7 +859,16 @@
       return;
     }
 
-    this.finale = { left: this.movesLeft };
+    /* Jeder Restzug wird ein Blitz. Bei viel Restluft werden mehrere pro
+       Schritt gezuendet — sonst dauert das Finale bei 25 uebrigen Zuegen
+       ueber eine Viertelminute und wird zur Geduldsprobe. So sind es nie
+       mehr als FINALE_STEPS Schritte. */
+    this.speed = FINALE_SPEED;
+    this.finale = {
+      left: this.movesLeft,
+      perStep: Math.max(1, Math.ceil(this.movesLeft / FINALE_STEPS))
+    };
+
     this.say('Alle Aufgaben erfüllt!');
     this.stepFinale();
   };
@@ -849,16 +882,11 @@
       return;
     }
 
-    this.finale.left--;
-    this.movesLeft = this.finale.left;
-    this.emitStats();
-
-    /* Einen zufaelligen normalen Stein in einen Blitz verwandeln und
-       sofort zuenden. */
+    /* Zufaellige normale Steine in Blitze verwandeln und gemeinsam zuenden. */
     var candidates = [];
     for (var i = 0; i < this.board.cells.length; i++) {
       var gem = this.board.cells[i];
-      if (gem && gem.kind === 'gem') candidates.push(i);
+      if (gem && gem.kind === 'gem' && gem.special === SPECIAL.NONE) candidates.push(i);
     }
 
     if (!candidates.length) {
@@ -867,18 +895,27 @@
       return;
     }
 
-    var pick = candidates[Math.floor(Math.random() * candidates.length)];
-    this.board.cells[pick].special = Math.random() < 0.5 ? SPECIAL.LINE_H : SPECIAL.LINE_V;
+    var batch = Math.min(this.finale.left, this.finale.perStep, candidates.length);
+    this.finale.left -= batch;
+    this.movesLeft = this.finale.left;
+    this.emitStats();
+
+    Utils.shuffleArray(Math.random, candidates);
+    var picks = candidates.slice(0, batch);
+
+    picks.forEach(function (idx) {
+      this.board.cells[idx].special = Math.random() < 0.5 ? SPECIAL.LINE_H : SPECIAL.LINE_V;
+    }, this);
 
     this.cascade = 0;
-    this.pendingSwapSeeds = { a: pick, b: pick, rainbow: [pick], targets: {} };
+    this.pendingSwapSeeds = { a: picks[0], b: picks[0], rainbow: picks, targets: {} };
     this.resolve();
   };
 
-  Game.prototype.startShuffle = function (message) {
+  Game.prototype.startShuffle = function (message, minMoves) {
     this.say(message || 'Kein Zug mehr möglich — Feld wird gemischt', !message);
     Audio.shuffle();
-    this.board.shuffle();
+    this.board.shuffle(minMoves);
 
     /* Steine fliegen kurz auseinander und sortieren sich neu ein. */
     for (var i = 0; i < this.board.cells.length; i++) {
@@ -923,6 +960,7 @@
   };
 
   Game.prototype.completeLevel = function () {
+    this.speed = 1;
     this.running = false;
     this.setPhase(PHASE.DONE);
     this.emitStats();
@@ -1033,7 +1071,7 @@
         break;
 
       case PHASE.CLEAR:
-        if (this.phaseT >= T_CLEAR) {
+        if (this.phaseT >= T_CLEAR * this.speed) {
           this.popping.length = 0;
           this.spawnBirthsAndFall();
         }
@@ -1100,7 +1138,7 @@
     if (this.phase === PHASE.FALL) this.updateFallViews();
 
     /* Auflös-Animation. */
-    var popT = Utils.clamp(this.phaseT / T_CLEAR, 0, 1);
+    var popT = Utils.clamp(this.phaseT / (T_CLEAR * this.speed), 0, 1);
     for (i = 0; i < this.popping.length; i++) {
       this.popping[i].popT = popT;
     }

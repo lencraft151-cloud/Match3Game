@@ -51,6 +51,7 @@
     els.startLevel = $('start-level');
     els.startGoals = $('start-goals');
     els.startMoves = $('start-moves');
+    els.startReplay = $('start-replay');
 
     /* Gewonnen */
     els.winStars = $('win-stars');
@@ -186,13 +187,22 @@
 
   /* -------------------------------------------------------- Power-Leiste */
 
+  /* Leere Power-Ups werden ausgegraut, bleiben aber anklickbar: nur so kann
+     das Spiel erklaeren, dass der Vorrat alle ist und was Nachschub kostet.
+     Ein deaktivierter Knopf sagt gar nichts. */
   UI.refreshPowerBar = function () {
     var p = Player.snapshot();
 
     Player.ITEM_KEYS.forEach(function (key) {
       var count = p.powerups[key] || 0;
+      var button = els.powerButtons[key];
+
       els.powerCounts[key].textContent = count;
-      els.powerButtons[key].disabled = count <= 0;
+      button.classList.toggle('is-empty', count <= 0);
+      button.title = count > 0
+        ? Player.ITEMS[key].hint
+        : Player.ITEMS[key].name + ' aufgebraucht — im Shop für ' +
+          Player.ITEMS[key].price + ' Kristalle nachkaufen';
     });
   };
 
@@ -308,9 +318,10 @@
 
   /* ----------------------------------------------------- Levelstart */
 
-  UI.showLevelStart = function (def) {
+  UI.showLevelStart = function (def, isReplay) {
     els.startLevel.textContent = def.level;
     els.startMoves.textContent = def.moves;
+    els.startReplay.hidden = !isReplay;
     renderGoalCards(els.startGoals, def.goals, null);
     UI.overlay('screen-levelstart', true);
   };

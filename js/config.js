@@ -46,14 +46,23 @@
     POINTS_BLOCKER: 120,
 
     /* Wie viele Zuege das Zug-Power-Up bringt. */
-    POWERUP_EXTRA_MOVES: 5,
+    POWERUP_EXTRA_MOVES: 7,
+
+    /* Wie viele Felder der Hammer raeumt: das angetippte plus die vier
+       direkten Nachbarn. */
+    POWERUP_HAMMER_CROSS: true,
+
+    /* Mindestens so viele gueltige Zuege muss das Mischen-Power-Up
+       herstellen — sonst mischt es weiter. Ein blosses "irgendein Zug geht"
+       fuehlt sich an, als haette man das Power-Up verschwendet. */
+    POWERUP_SHUFFLE_MIN_MOVES: 4,
 
     /* Angebot im Verloren-Popup: Zuege nachkaufen, statt ein Herz zu
        verlieren. Der Preis steigt mit jedem Nachkauf im selben Level, damit
        sich ein Level nicht beliebig durchkaufen laesst. */
     CONTINUE_MOVES: 5,
-    CONTINUE_PRICE: 40,
-    CONTINUE_PRICE_STEP: 30,
+    CONTINUE_PRICE: 60,
+    CONTINUE_PRICE_STEP: 60,
 
     /* ----------------------------------------------------------- Wirtschaft */
 
@@ -65,16 +74,25 @@
     LIVES_CAP: 10,
 
     /* Kristalle pro geschafftem Level: Grundwert, Zuschlag je Levelstufe und
-       Zuschlag je Stern. Sparsam gespielte Level lohnen sich damit doppelt. */
-    CRYSTALS_BASE: 20,
-    CRYSTALS_PER_LEVEL: 3,
-    CRYSTALS_PER_STAR: 12,
+       Zuschlag je Stern. Der Sternanteil ist der groesste — sparsam gespielte
+       Level sollen sich spuerbar mehr lohnen als durchgewuergte.
+
+         Level 1 mit 1 Stern   25 + 2 + 15  =  42
+         Level 1 mit 3 Sternen 25 + 2 + 45  =  72
+         Level 20 mit 2 Sternen 25 + 40 + 30 =  95 */
+    CRYSTALS_BASE: 25,
+    CRYSTALS_PER_LEVEL: 2,
+    CRYSTALS_PER_STAR: 15,
 
     /* Preise im Shop. */
-    PRICE_LIFE: 60,
-    PRICE_HAMMER: 40,
-    PRICE_SHUFFLE: 30,
-    PRICE_MOVES: 50,
+    /* Preisleiter, bewusst in dieser Reihenfolge und in runden Zahlen:
+       Mischen < Hammer < Extra-Zuege < Leben. Ein geschafftes Level bringt
+       rund 40 bis 95 Kristalle, ein Mischen kostet also etwa ein Level, ein
+       Leben rund zwei. */
+    PRICE_SHUFFLE: 60,
+    PRICE_HAMMER: 80,
+    PRICE_MOVES: 100,
+    PRICE_LIFE: 130,
 
     /* Startausstattung fuer neue Spieler — einmal jedes Power-Up zum
        Ausprobieren, sonst versteht niemand, wofuer die Kristalle gut sind. */
@@ -89,7 +107,10 @@
     STORE_PLAYER: 'gemcascade.player.v1',
     STORE_NAME: 'gemcascade.name.v1',
     STORE_MUTED: 'gemcascade.muted.v1',
-    STORE_PROGRESS: 'gemcascade.progress.v1',
+    /* v2: Der Fortschritt wurde bewusst zurueckgesetzt, damit jeder wieder
+       bei Level 1 anfaengt. Kristalle, Leben und Power-Ups haengen an einem
+       eigenen Schluessel und bleiben davon unberuehrt. */
+    STORE_PROGRESS: 'gemcascade.progress.v2',
     STORE_LIFETIME: 'gemcascade.lifetime.v1',
     STORE_PENDING: 'gemcascade.pending.v1'
   };

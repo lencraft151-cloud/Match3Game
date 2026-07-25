@@ -391,9 +391,28 @@
     return this.findHint() !== null;
   };
 
+  /* Wie viele gueltige Zuege gibt das Feld gerade her? Das Mischen-Power-Up
+     nutzt das, um nicht bloss irgendein spielbares Feld herzustellen, sondern
+     ein brauchbares. */
+  Board.prototype.countMoves = function () {
+    var count = 0;
+
+    for (var r = 0; r < this.rows; r++) {
+      for (var c = 0; c < this.cols; c++) {
+        var i = this.idx(c, r);
+        if (c < this.cols - 1 && this.swapWouldScore(i, i + 1)) count++;
+        if (r < this.rows - 1 && this.swapWouldScore(i, i + this.cols)) count++;
+      }
+    }
+
+    return count;
+  };
+
   /* Mischt die vorhandenen Farben neu durch, ohne Blocker und Spezialsteine
-     zu verschieben. Wiederholt, bis das Feld matchfrei und spielbar ist. */
-  Board.prototype.shuffle = function () {
+     zu verschieben. Wiederholt, bis das Feld matchfrei ist und mindestens
+     `minMoves` gueltige Zuege hergibt (Standard: einer). */
+  Board.prototype.shuffle = function (minMoves) {
+    var need = Math.max(1, minMoves || 1);
     var movable = [];
     var i;
 
@@ -409,8 +428,12 @@
       Utils.shuffleArray(this.rng, types);
       for (i = 0; i < movable.length; i++) this.cells[movable[i]].type = types[i];
 
-      if (!this.findRuns().length && this.hasValidMove()) return true;
+      if (!this.findRuns().length && this.countMoves() >= need) return true;
     }
+
+    /* Der Anspruch war zu hoch fuer dieses Feld — dann reicht auch ein
+       einzelner Zug, Hauptsache es geht weiter. */
+    if (need > 1) return this.shuffle(1);
 
     /* Notnagel: neu wuerfeln statt in einem toten Feld haengen zu bleiben. */
     for (i = 0; i < movable.length; i++) {

@@ -26,9 +26,10 @@ node server/server.js           # http://localhost:8080, inklusive Bestenliste
 
 ## So läuft das Spiel
 
-Auf der **Landkarte** liegen die Level als Bahn aus nummerierten Knoten. Das
-aktuelle trägt eine Krone, geschaffte zeigen ihre Sterne, der Rest ist
-gesperrt. Ein Tipp auf den Knoten öffnet die Levelkarte mit Aufgabe und
+Auf der **Landkarte** liegen die Level als Bahn aus nummerierten Knoten. Zu
+Beginn ist nur Level 1 offen; jedes geschaffte Level schaltet genau eines
+frei. Das aktuelle trägt eine Krone, geschaffte zeigen ihre Sterne und
+lassen sich für fehlende Sterne wiederholen, der Rest ist gesperrt. Ein Tipp auf den Knoten öffnet die Levelkarte mit Aufgabe und
 Zugzahl.
 
 Im Level tauschst du zwei benachbarte Steine, sodass drei oder mehr gleiche in
@@ -106,14 +107,16 @@ Im **Shop** wird daraus Nachschub:
 
 | Posten | Preis | Wirkung |
 |---|---|---|
-| ❤️ Extra-Leben | 60 💎 | Ein zusätzliches Leben, maximal 10 gleichzeitig |
-| 🔨 Hammer | 40 💎 | Zerschlägt einen beliebigen Stein — auch einen Fels |
-| 🔀 Mischen | 30 💎 | Würfelt das Feld neu durch |
-| ➕ Extra-Züge | 50 💎 | Legt 5 Züge drauf |
+| 🔀 Mischen | 60 💎 | Würfelt das Feld neu und sorgt für mindestens 4 mögliche Züge |
+| 🔨 Hammer | 80 💎 | Räumt ein **Kreuz**: das angetippte Feld und seine vier Nachbarn, Felsen inklusive |
+| ➕ Extra-Züge | 100 💎 | Legt 7 Züge drauf |
+| ❤️ Extra-Leben | 130 💎 | Ein zusätzliches Leben, maximal 10 gleichzeitig |
 
 Die drei Power-Ups liegen als Leiste unter dem Brett und **kosten selbst
-keinen Zug**. Der Hammer braucht ein Ziel: erst antippen, dann den Stein
-wählen — ein zweiter Tipp auf den Knopf entschärft ihn wieder.
+keinen Zug**. Der Hammer braucht ein Ziel: erst antippen, dann das Feld
+wählen — ein zweiter Tipp auf den Knopf entschärft ihn wieder. Ist ein
+Vorrat leer, bleibt der Knopf antippbar und sagt dir unter dem Brett, was
+Nachschub kostet.
 
 Alles davon liegt im `localStorage` des Browsers. Wer will, kann es dort
 manipulieren — ohne Benutzerkonten und serverseitige Spielstände lässt sich
@@ -153,7 +156,14 @@ node test/balance.js 1 60 100   # Level 1–60, je 100 Versuche
 
 Ein Bot spielt stur den erstbesten gültigen Zug und plant nichts. Zielkorridor
 ist eine Erfolgsquote von **60 bis 85 Prozent** — ein Mensch liegt darüber.
-Level 1–60 liegen aktuell alle in diesem Bereich.
+Stand der letzten Messung liegen Level 1–48 alle zwischen **56 und 88
+Prozent**, mit leichtem Gefälle nach hinten.
+
+Bei Felsen entscheidet übrigens nicht die Zugzahl, sondern wie viele
+überhaupt auf dem Feld liegen: bei 6 gesetzten Felsen schafft der Bot nur in
+48 % der Fälle vier Treffer, bei 8 Felsen in 85 %. Einzelne Felsen werden
+schlicht nie von einem Treffer erwischt. Deshalb liegen immer deutlich mehr
+Felsen herum, als die Aufgabe verlangt.
 
 Gemessene Ausbeute pro 25 Bot-Züge: rund 23 Steine je Farbe bei fünf Farben,
 17 bei sechs, 13 bei sieben. Weil Treffer mit mehr Farben deutlich seltener
@@ -163,7 +173,7 @@ späten Leveln unerreichbar.
 ## Tests
 
 ```bash
-node test/board.test.js     # 38 Prüfungen — Spielfeldlogik
+node test/board.test.js     # 43 Prüfungen — Spielfeldlogik
 node test/player.test.js    # 57 Prüfungen — Leben, Kristalle, Käufe
 node test/levels.test.js    # 31 Prüfungen — Level und Aufgaben
 ```

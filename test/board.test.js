@@ -214,6 +214,51 @@ section('Zuege und Sackgassen');
 }
 
 {
+  /* countMoves zaehlt dasselbe, was findHint findet — nur eben alles. */
+  const board = new Board({ cols: 8, rows: 8, colors: 6, rng: Utils.makeRng(99) });
+  board.generate(0);
+
+  const count = board.countMoves();
+  check('countMoves() findet mindestens einen Zug', count >= 1, String(count));
+  check('countMoves() passt zu hasValidMove()',
+    (count > 0) === board.hasValidMove());
+
+  /* Von Hand nachzaehlen und vergleichen. */
+  let manual = 0;
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const i = board.idx(c, r);
+      if (c < 7 && board.swapWouldScore(i, i + 1)) manual++;
+      if (r < 7 && board.swapWouldScore(i, i + 8)) manual++;
+    }
+  }
+  check('countMoves() stimmt mit der Handzaehlung ueberein', count === manual,
+    `${count} vs ${manual}`);
+}
+
+{
+  /* Das Mischen-Power-Up verlangt mehrere Zuege, nicht bloss irgendeinen. */
+  let short = 0;
+
+  for (let seed = 1; seed <= 40; seed++) {
+    const board = new Board({ cols: 8, rows: 8, colors: 6, rng: Utils.makeRng(seed * 77) });
+    board.generate(0);
+    board.shuffle(4);
+    if (board.countMoves() < 4) short++;
+  }
+
+  check('shuffle(4) stellt in der Regel vier Zuege her', short <= 2,
+    `${short} von 40 Versuchen blieben darunter`);
+
+  /* Auch mit unerfuellbarem Anspruch darf es nie ein totes Feld hinterlassen. */
+  const tight = new Board({ cols: 8, rows: 8, colors: 6, rng: Utils.makeRng(4242) });
+  tight.generate(0);
+  tight.shuffle(999);
+  check('Unerfuellbarer Anspruch liefert trotzdem ein spielbares Feld',
+    tight.hasValidMove());
+}
+
+{
   const board = fromLayout([
     'AABCDEFA',
     'BCDEFABC',

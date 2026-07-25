@@ -656,6 +656,18 @@ body.is-muted .icon-btn__off { display: inline; }
 
 .power:disabled { opacity: 0.4; cursor: default; filter: grayscale(0.5); }
 
+/* Leerer Vorrat: sichtbar verbraucht, aber weiterhin antippbar — der Tipp
+   erklaert dann, was Nachschub kostet. */
+.power.is-empty {
+  opacity: 0.5;
+  filter: grayscale(0.7);
+}
+
+.power.is-empty .power__count {
+  background: rgba(255, 255, 255, 0.25);
+  color: var(--ink-dim);
+}
+
 .power__icon { font-size: 19px; line-height: 1; }
 
 .power__name {
@@ -716,6 +728,12 @@ body.is-arming #board-canvas { cursor: crosshair; }
   font-size: 22px;
   color: var(--gold);
   font-variant-numeric: tabular-nums;
+}
+
+.card__replay {
+  margin: -12px 0 18px;
+  font-size: 13px;
+  color: var(--ink-faint);
 }
 
 .goal-cards {

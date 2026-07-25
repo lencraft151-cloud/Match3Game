@@ -90,7 +90,7 @@
     </button>
     <button class="power" id="pw-moves" type="button">
       <span class="power__icon">&#10133;</span>
-      <span class="power__name">+5 Züge</span>
+      <span class="power__name">+7 Züge</span>
       <span class="power__count" id="count-moves">0</span>
     </button>
   </div>
@@ -109,6 +109,9 @@
     <ul class="goal-cards" id="start-goals"></ul>
 
     <p class="card__moves">Du hast <strong id="start-moves">25</strong> Züge</p>
+    <p class="card__replay" id="start-replay" hidden>
+      Schon geschafft &mdash; du spielst es für die Sterne noch einmal.
+    </p>
 
     <div class="menu">
       <button class="btn btn--primary btn--big" id="btn-level-play">Spielen</button>
@@ -236,9 +239,10 @@
     <ul class="rules">
       <li><b>Leben:</b> Du hast <b id="help-lives">5</b>. Ein verlorenes Level kostet eines; alle 30 Minuten wächst eines nach, und um Mitternacht sind alle wieder da.</li>
       <li><b>Kristalle &#128142;:</b> Gibt es für jedes geschaffte Level &mdash; mehr Sterne, mehr Kristalle. Im Shop kaufst du dafür Leben und Power-Ups.</li>
-      <li><b>&#128296; Hammer:</b> Zerschlägt einen beliebigen Stein, auch einen Fels.</li>
-      <li><b>&#128256; Mischen:</b> Würfelt das Feld neu durch.</li>
-      <li><b>&#10133; Extra-Züge:</b> Legt 5 Züge drauf. Power-Ups kosten selbst keinen Zug.</li>
+      <li><b>&#128296; Hammer:</b> Erst den Knopf antippen, dann ein Feld auf dem Brett &mdash; dieses Feld <b>und seine vier Nachbarn</b> fliegen raus, Felsen inklusive. Nochmal auf den Knopf tippen bricht ab.</li>
+      <li><b>&#128256; Mischen:</b> Würfelt das Feld neu und stellt sicher, dass danach mindestens vier Züge möglich sind.</li>
+      <li><b>&#10133; Extra-Züge:</b> Legt 7 Züge drauf.</li>
+      <li><b>Wichtig:</b> Power-Ups kosten selbst <b>keinen Zug</b>. Ist der Vorrat leer, sagt dir das Spiel unter dem Brett Bescheid.</li>
     </ul>
 
     <p class="rules__note">Tastatur: Pfeiltasten bewegen, Leertaste wählt aus und tauscht, <kbd>P</kbd> pausiert.</p>
