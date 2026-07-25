@@ -90,6 +90,7 @@
     this.selected = null;      /* Index des angetippten Steins */
     this.cursor = null;        /* Tastatur-Cursor */
     this.dragOrigin = null;    /* Startpunkt einer Ziehgeste */
+    this.armed = null;         /* scharfes Power-Up, aktuell nur 'hammer' */
     this.hint = null;
     this.idleTime = 0;
 
@@ -173,6 +174,8 @@
 
     this.selected = null;
     this.cursor = null;
+    this.dragOrigin = null;
+    this.armed = null;
     this.hint = null;
     this.idleTime = 0;
     this.popping.length = 0;
@@ -248,6 +251,13 @@
 
     var idx = this.cellAtPixel(px, py);
     if (idx === null) return;
+
+    /* Scharfer Hammer: der Tipp schlaegt zu, statt zu tauschen. */
+    if (this.armed === 'hammer') {
+      this.disarm();
+      this.useHammer(idx);
+      return;
+    }
 
     var gem = this.board.cells[idx];
     if (!gem || gem.kind === 'blocker') {
@@ -366,6 +376,93 @@
     }
 
     return false;
+  };
+
+  /* ====================================================================== */
+  /*  Power-Ups                                                             */
+  /* ====================================================================== */
+
+  /* Der Hammer braucht ein Ziel, also wird er erst "scharf gemacht" und
+     schlaegt beim naechsten Tipp aufs Brett zu. Die anderen beiden wirken
+     sofort. */
+  Game.prototype.armHammer = function () {
+    if (!this.acceptsInput()) return false;
+
+    this.armed = 'hammer';
+    this.selected = null;
+    this.hint = null;
+    this.say('Tippe den Stein an, den du zerschlagen willst');
+    if (this.hooks.onArmChange) this.hooks.onArmChange('hammer');
+    return true;
+  };
+
+  Game.prototype.disarm = function () {
+    if (!this.armed) return;
+    this.armed = null;
+    this.say('Ziehe oder tippe zwei benachbarte Steine');
+    if (this.hooks.onArmChange) this.hooks.onArmChange(null);
+  };
+
+  Game.prototype.useHammer = function (idx) {
+    var gem = this.board.cells[idx];
+    if (!gem) return false;
+
+    this.selected = null;
+    this.hint = null;
+    this.idleTime = 0;
+
+    var pos = this.cellCenter(this.board.colOf(idx), this.board.rowOf(idx));
+    this.fx.ring(pos.x, pos.y, this.cell * 1.9, '#ffcc4d', 5);
+    this.addShake(8);
+    Audio.explode();
+
+    if (gem.kind === 'blocker') {
+      /* resolveBlast raeumt Felsen bewusst nur ueber die Nachbarschaftsregel —
+         der Hammer schlaegt ihn direkt weg. */
+      this.cascade = 1;
+      this.startClear({ cleared: [], blockers: [idx], activations: [] }, [], null);
+    } else {
+      this.cascade = 0;
+      this.pendingSwapSeeds = { a: idx, b: idx, rainbow: [idx], targets: {} };
+      this.resolve();
+    }
+
+    this.spent('hammer');
+    return true;
+  };
+
+  Game.prototype.usePowerShuffle = function () {
+    if (!this.acceptsInput()) return false;
+    this.disarm();
+    this.startShuffle('Feld neu gemischt');
+    this.spent('shuffle');
+    return true;
+  };
+
+  Game.prototype.usePowerTime = function () {
+    if (!this.addTime(CONFIG.POWERUP_TIME_BONUS)) return false;
+    this.spent('time');
+    return true;
+  };
+
+  /* Meldet den Verbrauch nach oben — den Vorrat fuehrt player.js, nicht
+     die Engine. */
+  Game.prototype.spent = function (key) {
+    if (this.hooks.onPowerUsed) this.hooks.onPowerUsed(key);
+  };
+
+  Game.prototype.addTime = function (seconds) {
+    if (!this.running) return false;
+
+    this.timeLeft += seconds;
+
+    var mid = this.cellCenter(this.cols / 2 - 0.5, this.rows / 2 - 0.5);
+    this.fx.text(mid.x, mid.y, '+' + seconds + 's', '#7ee787', Math.round(this.cell * 0.6));
+    this.fx.ring(mid.x, mid.y, this.cell * 3.2, '#7ee787', 4);
+    Audio.specialBorn();
+
+    this.emitStats();
+    return true;
   };
 
   /* ====================================================================== */
@@ -692,8 +789,8 @@
     this.setPhase(PHASE.IDLE);
   };
 
-  Game.prototype.startShuffle = function () {
-    this.say('Kein Zug mehr möglich — Feld wird gemischt', true);
+  Game.prototype.startShuffle = function (message) {
+    this.say(message || 'Kein Zug mehr möglich — Feld wird gemischt', !message);
     Audio.shuffle();
     this.board.shuffle();
 
@@ -763,6 +860,7 @@
         levelScore: this.levelScore,
         bonus: bonus,
         carry: carry,
+        secondsLeft: secondsLeft,
         total: this.totalScore
       });
     }

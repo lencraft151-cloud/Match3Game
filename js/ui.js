@@ -10,7 +10,9 @@
   'use strict';
 
   var Utils = root.M3.Utils;
+  var CONFIG = root.M3.CONFIG;
   var Leaderboard = root.M3.Leaderboard;
+  var Player = root.M3.Player;
 
   var doc = root.document;
 
@@ -65,8 +67,118 @@
     els.tabOnline = $('tab-online');
     els.tabLocal = $('tab-local');
 
+    els.hearts = $('hearts');
+    els.livesNote = $('lives-note');
+    els.crystals = $('crystals');
+    els.helpLives = $('help-lives');
+
+    els.overHearts = $('over-hearts');
+    els.overLivesText = $('over-lives-text');
+    els.reviveBox = $('revive-box');
+    els.revivePrice = $('revive-price');
+    els.reviveState = $('revive-state');
+    els.btnBuyLife = $('btn-buy-life');
+    els.btnAgain = $('btn-again');
+
+    els.lvlCrystals = $('lvl-crystals');
+
+    els.shopList = $('shop-list');
+    els.shopCrystals = $('shop-crystals');
+    els.shopState = $('shop-state');
+
+    els.powerbar = $('powerbar');
+    els.powerButtons = {
+      hammer: $('pw-hammer'),
+      shuffle: $('pw-shuffle'),
+      time: $('pw-time')
+    };
+    els.powerCounts = {
+      hammer: $('count-hammer'),
+      shuffle: $('count-shuffle'),
+      time: $('count-time')
+    };
+
+    els.revivePrice.textContent = CONFIG.PRICE_LIFE;
+    els.helpLives.textContent = CONFIG.MAX_LIVES;
+
     els.nameInput.value = Leaderboard.rememberedName();
     UI.refreshBest();
+    UI.refreshWallet();
+  };
+
+  /* ------------------------------------------------- Leben und Kristalle */
+
+  /* Volle und leere Herzen bis zum Tagesmaximum; gekaufte Extraleben
+     darueber hinaus haengen als "+n" dran. */
+  function renderHearts(target, lives, maxLives) {
+    target.textContent = '';
+
+    var shown = Math.min(lives, maxLives);
+    var i;
+
+    for (i = 0; i < shown; i++) {
+      target.appendChild(heartSpan('♥', 'heart--full'));
+    }
+    for (i = shown; i < maxLives; i++) {
+      target.appendChild(heartSpan('♡', 'heart--empty'));
+    }
+
+    if (lives > maxLives) {
+      var extra = doc.createElement('span');
+      extra.className = 'heart--full';
+      extra.textContent = ' +' + (lives - maxLives);
+      target.appendChild(extra);
+    }
+  }
+
+  function heartSpan(glyph, cls) {
+    var span = doc.createElement('span');
+    span.className = cls;
+    span.textContent = glyph;
+    return span;
+  }
+
+  UI.refreshWallet = function () {
+    var p = Player.snapshot();
+
+    renderHearts(els.hearts, p.lives, p.maxLives);
+    els.crystals.textContent = Utils.formatNumber(p.crystals);
+
+    if (p.lives <= 0) {
+      els.livesNote.textContent = 'Heute aufgebraucht';
+    } else if (p.lives === 1) {
+      els.livesNote.textContent = 'Noch 1 Versuch';
+    } else {
+      els.livesNote.textContent = 'Noch ' + p.lives + ' Versuche';
+    }
+
+    UI.refreshPowerBar();
+  };
+
+  /* Kurzer Schlag auf die Herzen, wenn ein Leben weg ist. */
+  UI.pulseHearts = function () {
+    els.hearts.classList.remove('is-lost');
+    void els.hearts.offsetWidth;
+    els.hearts.classList.add('is-lost');
+  };
+
+  /* -------------------------------------------------------- Power-Leiste */
+
+  UI.refreshPowerBar = function () {
+    var p = Player.snapshot();
+
+    Player.ITEM_KEYS.forEach(function (key) {
+      var count = p.powerups[key] || 0;
+      els.powerCounts[key].textContent = count;
+      els.powerButtons[key].disabled = count <= 0;
+    });
+  };
+
+  UI.setArmed = function (key) {
+    Player.ITEM_KEYS.forEach(function (item) {
+      els.powerButtons[item].classList.toggle('is-armed', item === key);
+    });
+    doc.body.classList.toggle('is-arming', !!key);
   };
 
   /* ------------------------------------------------------------- Screens */
@@ -153,12 +265,14 @@
 
   /* -------------------------------------------------------- Level fertig */
 
-  UI.showLevelComplete = function (data) {
+  UI.showLevelComplete = function (data, crystals) {
     els.lvlScore.textContent = Utils.formatNumber(data.levelScore);
     els.lvlBonus.textContent = '+' + Utils.formatNumber(data.bonus);
     els.lvlCarry.textContent = '+' + data.carry.toFixed(1) + 's';
+    els.lvlCrystals.textContent = '+' + Utils.formatNumber(crystals) + ' 💎';
     els.lvlTotal.textContent = Utils.formatNumber(data.total);
     els.lvlNextNum.textContent = data.nextLevel;
+    UI.refreshWallet();
     UI.overlay('screen-level', true);
   };
 
@@ -178,7 +292,115 @@
 
     if (!els.nameInput.value) els.nameInput.value = Leaderboard.rememberedName();
 
+    UI.refreshLivesOnGameOver();
     UI.overlay('screen-over', true);
+  };
+
+  /* Zeigt die verbleibenden Versuche und blendet bei null den Kauf ein. */
+  UI.refreshLivesOnGameOver = function () {
+    var p = Player.snapshot();
+
+    renderHearts(els.overHearts, p.lives, p.maxLives);
+
+    if (p.lives <= 0) {
+      els.overLivesText.textContent = 'Keine Versuche mehr heute';
+    } else if (p.lives === 1) {
+      els.overLivesText.textContent = 'Noch 1 Versuch heute';
+    } else {
+      els.overLivesText.textContent = 'Noch ' + p.lives + ' Versuche heute';
+    }
+
+    var broke = p.lives <= 0;
+    els.reviveBox.hidden = !broke;
+    els.btnAgain.disabled = broke;
+    els.btnBuyLife.disabled = p.crystals < CONFIG.PRICE_LIFE;
+
+    if (broke && p.crystals < CONFIG.PRICE_LIFE) {
+      UI.setReviveState('Dir fehlen ' + (CONFIG.PRICE_LIFE - p.crystals) +
+        ' Kristalle. Morgen sind deine Versuche wieder da.');
+    } else if (broke) {
+      UI.setReviveState('');
+    }
+
+    UI.refreshWallet();
+  };
+
+  UI.setReviveState = function (text, kind) {
+    els.reviveState.textContent = text;
+    els.reviveState.className = 'revive__state' + (kind ? ' is-' + kind : '');
+  };
+
+  /* ---------------------------------------------------------------- Shop */
+
+  UI.renderShop = function () {
+    var p = Player.snapshot();
+
+    els.shopCrystals.textContent = Utils.formatNumber(p.crystals);
+    els.shopList.textContent = '';
+
+    /* Leben zuerst — das ist der Grund, warum die meisten hier landen. */
+    els.shopList.appendChild(shopRow({
+      icon: '❤️',
+      name: 'Extra-Leben',
+      desc: 'Ein zusätzlicher Versuch. Maximal ' + CONFIG.LIVES_CAP + ' auf einmal.',
+      owned: p.lives + ' / ' + CONFIG.LIVES_CAP,
+      price: CONFIG.PRICE_LIFE,
+      affordable: p.crystals >= CONFIG.PRICE_LIFE && p.lives < CONFIG.LIVES_CAP,
+      action: 'life'
+    }));
+
+    Player.ITEM_KEYS.forEach(function (key) {
+      var item = Player.ITEMS[key];
+      els.shopList.appendChild(shopRow({
+        icon: item.icon,
+        name: item.name,
+        desc: item.hint,
+        owned: 'Vorrat: ' + p.powerups[key],
+        price: item.price,
+        affordable: p.crystals >= item.price,
+        action: key
+      }));
+    });
+  };
+
+  function shopRow(spec) {
+    var row = doc.createElement('li');
+    row.className = 'shop__row' + (spec.affordable ? ' shop__row--affordable' : '');
+
+    var icon = doc.createElement('span');
+    icon.className = 'shop__icon';
+    icon.textContent = spec.icon;
+
+    var name = doc.createElement('span');
+    name.className = 'shop__name';
+    name.textContent = spec.name;
+
+    var owned = doc.createElement('span');
+    owned.className = 'shop__owned';
+    owned.textContent = spec.owned;
+    name.appendChild(owned);
+
+    var desc = doc.createElement('span');
+    desc.className = 'shop__desc';
+    desc.textContent = spec.desc;
+    name.appendChild(desc);
+
+    var buy = doc.createElement('button');
+    buy.className = 'shop__buy';
+    buy.type = 'button';
+    buy.textContent = spec.price + ' 💎';
+    buy.disabled = !spec.affordable;
+    buy.dataset.buy = spec.action;
+
+    row.appendChild(icon);
+    row.appendChild(name);
+    row.appendChild(buy);
+    return row;
+  }
+
+  UI.setShopState = function (text, kind) {
+    els.shopState.textContent = text;
+    els.shopState.className = 'shop__state' + (kind ? ' is-' + kind : '');
   };
 
   UI.setSubmitState = function (text, kind) {

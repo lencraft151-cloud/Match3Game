@@ -14,6 +14,7 @@
   var CONFIG = root.M3.CONFIG;
   var Audio = root.M3.Audio;
   var Leaderboard = root.M3.Leaderboard;
+  var Player = root.M3.Player;
   var UI = root.M3.UI;
   var Game = root.M3.Game;
   var COLORS = root.M3.GEM_COLORS;
@@ -151,7 +152,15 @@
   /*  Spielsteuerung                                                        */
   /* ====================================================================== */
 
+  /* Ohne Leben geht nichts los — dann direkt in den Shop, statt den Knopf
+     wirkungslos verpuffen zu lassen. */
   function startRun(level) {
+    if (!Player.hasLife()) {
+      openShop('Keine Versuche mehr heute. Ein Extra-Leben kostet ' +
+        CONFIG.PRICE_LIFE + ' Kristalle.');
+      return;
+    }
+
     UI.resetStatCache();
     UI.overlay('screen-pause', false);
     UI.overlay('screen-level', false);
@@ -190,15 +199,72 @@
 
     onLevelComplete: function (data) {
       lastLevelData = data;
-      UI.showLevelComplete(data);
+      var crystals = Player.crystalsForLevel(data.level, data.secondsLeft);
+      Player.earn(crystals);
+      UI.showLevelComplete(data, crystals);
     },
 
     onGameOver: function (data) {
       lastGameOver = data;
+
+      /* Ein verlorener Lauf kostet einen der Tagesversuche. */
+      Player.loseLife();
+      UI.pulseHearts();
+
       var isRecord = data.score > 0 && data.score > Leaderboard.localBest();
       UI.showGameOver(data, isRecord);
+    },
+
+    onArmChange: function (key) {
+      UI.setArmed(key);
+    },
+
+    onPowerUsed: function (key) {
+      Player.consume(key);
+      UI.refreshPowerBar();
     }
   };
+
+  /* ====================================================================== */
+  /*  Shop und Power-Ups                                                    */
+  /* ====================================================================== */
+
+  function openShop(message) {
+    UI.renderShop();
+    UI.setShopState(message || '', message ? 'warn' : null);
+    UI.show('screen-shop');
+  }
+
+  function buy(action) {
+    var result = action === 'life' ? Player.buyLife() : Player.buyPowerUp(action);
+
+    if (!result.ok) {
+      UI.setShopState(result.reason, 'warn');
+      return;
+    }
+
+    var label = action === 'life' ? 'Extra-Leben' : Player.ITEMS[action].name;
+    UI.setShopState(label + ' gekauft.', 'ok');
+
+    UI.renderShop();
+    UI.refreshWallet();
+  }
+
+  function usePower(key) {
+    if (!game.acceptsInput()) return;
+
+    /* Der scharfe Hammer laesst sich durch erneutes Antippen entschaerfen. */
+    if (key === 'hammer' && game.armed === 'hammer') {
+      game.disarm();
+      return;
+    }
+
+    if (Player.countOf(key) <= 0) return;
+
+    if (key === 'hammer') game.armHammer();
+    else if (key === 'shuffle') game.usePowerShuffle();
+    else if (key === 'time') game.usePowerTime();
+  }
 
   /* ====================================================================== */
   /*  Eingabe                                                               */
@@ -292,6 +358,35 @@
     on('btn-help-back', function () { UI.show('screen-start'); });
     on('btn-scores-back', function () { UI.show('screen-start'); });
 
+    on('btn-shop', function () { openShop(); });
+    on('btn-shop-back', function () {
+      UI.refreshWallet();
+      UI.show('screen-start');
+    });
+
+    /* Ein Listener fuer alle Kaufknoepfe — die Zeilen werden bei jedem
+       Kauf neu aufgebaut, einzelne Listener waeren sofort veraltet. */
+    doc.getElementById('shop-list').addEventListener('click', function (e) {
+      var button = e.target.closest ? e.target.closest('[data-buy]') : null;
+      if (!button || button.disabled) return;
+      Audio.unlock();
+      buy(button.dataset.buy);
+    });
+
+    on('pw-hammer', function () { usePower('hammer'); });
+    on('pw-shuffle', function () { usePower('shuffle'); });
+    on('pw-time', function () { usePower('time'); });
+
+    on('btn-buy-life', function () {
+      var result = Player.buyLife();
+      if (!result.ok) {
+        UI.setReviveState(result.reason, 'warn');
+        return;
+      }
+      UI.setReviveState('Leben gekauft — auf geht’s!', 'ok');
+      UI.refreshLivesOnGameOver();
+    });
+
     on('tab-online', function () { UI.setScoreTab('online'); UI.loadScores(); });
     on('tab-local', function () { UI.setScoreTab('local'); UI.loadScores(); });
 
@@ -306,9 +401,12 @@
     });
 
     on('btn-quit', function () {
+      /* Aufgeben kostet bewusst kein Leben — verloren ist nur, wem die Zeit
+         ausgeht. Der Levelfortschritt ist ohnehin weg. */
       game.stop();
       UI.overlay('screen-pause', false);
       UI.refreshBest();
+      UI.refreshWallet();
       UI.show('screen-start');
     });
 
@@ -324,6 +422,7 @@
     on('btn-over-menu', function () {
       UI.overlay('screen-over', false);
       UI.refreshBest();
+      UI.refreshWallet();
       UI.show('screen-start');
     });
 
@@ -389,6 +488,7 @@
   /* ====================================================================== */
 
   function boot() {
+    Player.load();
     UI.init();
 
     backdrop = new Backdrop(doc.getElementById('bg-canvas'));

@@ -21,9 +21,21 @@
       <span class="title__word title__word--accent">Cascade</span>
     </h1>
     <p class="tagline">Kombiniere drei. Jage die Kaskade. Schlag die Uhr.</p>
+    <div class="wallet" id="start-wallet">
+      <div class="wallet__item" id="lives-display" title="Leben">
+        <span class="hearts" id="hearts"></span>
+        <span class="wallet__label" id="lives-note">5 Versuche heute</span>
+      </div>
+      <div class="wallet__item">
+        <span class="crystal">💎</span>
+        <strong class="wallet__value" id="crystals">0</strong>
+      </div>
+    </div>
+
     <div class="menu">
       <button class="btn btn--primary btn--big" id="btn-play">Spielen</button>
       <button class="btn" id="btn-continue" hidden>Level <span id="continue-level">1</span> fortsetzen</button>
+      <button class="btn" id="btn-shop">Shop</button>
       <button class="btn" id="btn-scores">Bestenliste</button>
       <button class="btn" id="btn-help">Anleitung</button>
     </div>
@@ -67,6 +79,24 @@
             aria-label="Spielfeld. Mit Pfeiltasten bewegen, Leertaste zum Auswählen und Tauschen."></canvas>
   </div>
 
+  <div class="powerbar" id="powerbar" role="group" aria-label="Power-Ups">
+    <button class="power" id="pw-hammer" type="button">
+      <span class="power__icon">🔨</span>
+      <span class="power__name">Hammer</span>
+      <span class="power__count" id="count-hammer">0</span>
+    </button>
+    <button class="power" id="pw-shuffle" type="button">
+      <span class="power__icon">🔀</span>
+      <span class="power__name">Mischen</span>
+      <span class="power__count" id="count-shuffle">0</span>
+    </button>
+    <button class="power" id="pw-time" type="button">
+      <span class="power__icon">⏱️</span>
+      <span class="power__name">+15s</span>
+      <span class="power__count" id="count-time">0</span>
+    </button>
+  </div>
+
   <footer class="game-foot">
     <span class="hint" id="game-hint">Ziehe oder tippe zwei benachbarte Steine</span>
   </footer>
@@ -92,6 +122,7 @@
       <div class="tally__row"><dt>Punkte</dt><dd id="lvl-score">0</dd></div>
       <div class="tally__row"><dt>Zeitbonus</dt><dd id="lvl-bonus">+0</dd></div>
       <div class="tally__row"><dt>Zeit mitgenommen</dt><dd id="lvl-carry">+0s</dd></div>
+      <div class="tally__row tally__row--crystals"><dt>Kristalle</dt><dd id="lvl-crystals">+0 💎</dd></div>
       <div class="tally__row tally__row--total"><dt>Gesamt</dt><dd id="lvl-total">0</dd></div>
     </dl>
     <button class="btn btn--primary btn--big" id="btn-next">Level <span id="lvl-next-num">2</span></button>
@@ -103,6 +134,19 @@
     <h2 class="panel__title panel__title--sad">Zeit abgelaufen</h2>
     <p class="final-score"><span id="over-score">0</span></p>
     <p class="final-sub">Level <span id="over-level">1</span> &middot; <span id="over-note">Neuer Rekord!</span></p>
+
+    <div class="lives-strip">
+      <span class="hearts" id="over-hearts"></span>
+      <span class="lives-strip__text" id="over-lives-text">Noch 4 Versuche heute</span>
+    </div>
+
+    <div class="revive" id="revive-box" hidden>
+      <p class="revive__text">Für heute sind deine Versuche aufgebraucht.</p>
+      <button class="btn btn--primary" id="btn-buy-life" type="button">
+        Leben kaufen &middot; <span id="revive-price">60</span> 💎
+      </button>
+      <p class="revive__state" id="revive-state"></p>
+    </div>
 
     <form class="score-form" id="score-form" autocomplete="off">
       <label class="field">
@@ -117,6 +161,22 @@
       <button class="btn" id="btn-again">Nochmal</button>
       <button class="btn btn--quiet" id="btn-over-menu">Menü</button>
     </div>
+  </div>
+</section>
+
+<!-- ============================= SHOP ============================ -->
+<section class="screen" id="screen-shop">
+  <div class="panel panel--wide">
+    <h2 class="panel__title">Shop</h2>
+    <p class="shop__balance">
+      Guthaben: <strong id="shop-crystals">0</strong> 💎
+      <span class="shop__hint">Kristalle gibt es für jedes geschaffte Level.</span>
+    </p>
+
+    <ul class="shop" id="shop-list"></ul>
+
+    <p class="shop__state" id="shop-state"></p>
+    <button class="btn" id="btn-shop-back">Zurück</button>
   </div>
 </section>
 
@@ -154,6 +214,16 @@
       <li><span class="chip chip--rainbow"></span><b>Prisma</b> &mdash; aus 5 in einer Reihe. Tausche es mit einem Stein und alle Steine dieser Farbe verschwinden.</li>
       <li><span class="chip chip--stone"></span><b>Fels</b> &mdash; ab Level 4. Lässt sich nicht tauschen, zerbricht aber durch Treffer nebenan.</li>
     </ul>
+
+    <h3 class="panel__sub">Leben, Kristalle, Power-Ups</h3>
+    <ul class="rules">
+      <li><b>Leben:</b> Du hast <b id="help-lives">5</b> Versuche pro Tag. Jeder verlorene Lauf kostet einen; um Mitternacht sind sie wieder da.</li>
+      <li><b>Kristalle 💎:</b> Gibt es für jedes geschaffte Level &mdash; je schneller, desto mehr. Im Shop kaufst du dafür Leben und Power-Ups.</li>
+      <li><b>🔨 Hammer:</b> Zerschlägt einen beliebigen Stein, auch einen Fels.</li>
+      <li><b>🔀 Mischen:</b> Würfelt das Feld neu durch, wenn nichts mehr passt.</li>
+      <li><b>⏱️ Zeit:</b> Legt 15 Sekunden auf die Uhr.</li>
+    </ul>
+
     <p class="rules__note">Steuerung per Tastatur: Pfeiltasten bewegen, Leertaste wählt aus und tauscht, <kbd>P</kbd> pausiert.</p>
     <button class="btn" id="btn-help-back">Zurück</button>
   </div>
@@ -161,6 +231,7 @@
 
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/player.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/particles.js"></script>
 <script src="js/levels.js"></script>

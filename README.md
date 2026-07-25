@@ -48,6 +48,37 @@ wenn direkt daneben ein Treffer landet.
 
 Gibt es keinen gültigen Zug mehr, mischt sich das Feld sichtbar neu.
 
+### Leben, Kristalle und Power-Ups
+
+Du hast **fünf Versuche pro Tag**. Jeder Lauf, in dem dir die Zeit ausgeht,
+kostet einen davon; um Mitternacht sind sie wieder da. Aufgeben im Pausenmenü
+kostet bewusst nichts — verloren ist nur, wem die Uhr davonläuft.
+
+Für jedes geschaffte Level gibt es **Kristalle 💎**: ein Grundbetrag, ein
+Zuschlag pro Levelstufe und einer für jede zweite übrige Sekunde. Schnell
+gespielt lohnt sich also doppelt.
+
+Im **Shop** wird daraus Nachschub:
+
+| Posten | Preis | Wirkung |
+|---|---|---|
+| ❤️ Extra-Leben | 60 💎 | Ein zusätzlicher Versuch, maximal 10 gleichzeitig |
+| 🔨 Hammer | 40 💎 | Zerschlägt einen beliebigen Stein — auch einen Fels |
+| 🔀 Mischen | 30 💎 | Würfelt das Feld neu durch |
+| ⏱️ Zeit | 50 💎 | Legt 15 Sekunden auf die Uhr |
+
+Die drei Power-Ups liegen als Leiste unter dem Brett und werden dort direkt
+eingesetzt. Der Hammer braucht ein Ziel: erst antippen, dann den Stein wählen
+— ein zweiter Tipp auf den Knopf entschärft ihn wieder. Zum Ausprobieren
+startet jeder mit je einem Stück.
+
+Sind alle Versuche weg, führt „Spielen" in den Shop statt ins Spiel, und der
+Game-Over-Bildschirm bietet den Kauf direkt an.
+
+Das alles liegt im `localStorage` des Browsers. Wer will, kann es dort
+manipulieren — ohne Benutzerkonten und serverseitige Spielstände lässt sich
+das nicht verhindern, und dafür ist ein Match-3-Spiel der falsche Ort.
+
 ### Steuerung
 
 | Eingabe | Wirkung |
@@ -112,20 +143,28 @@ Platz (siehe oben).
 ## Tests
 
 ```bash
-node test/board.test.js
+node test/board.test.js     # 38 Prüfungen
+node test/player.test.js    # 42 Prüfungen
 ```
 
-38 Prüfungen ohne Framework und ohne Browser: Startfelder ohne geschenkte
-Treffer, Match- und Cluster-Erkennung, Spezialsteine, Kettenreaktionen,
-Felsen, Schwerkraft, Sackgassen und ein Dauerlauf über 600 Züge.
+Ohne Framework und ohne Browser.
+
+`board.test.js` prüft Startfelder ohne geschenkte Treffer, Match- und
+Cluster-Erkennung, Spezialsteine, Kettenreaktionen, Felsen, Schwerkraft,
+Sackgassen und einen Dauerlauf über 600 Züge.
+
+`player.test.js` prüft Leben, den Tageswechsel um Mitternacht, die
+Kristallberechnung, Käufe samt Obergrenzen und was bei manipulierten oder
+kaputten Spielständen passiert.
 
 ## Aufbau
 
 ```
 index.html          Alle Screens
 css/style.css       Styling, Screen-Übergänge, Responsive
-js/config.js        Einstellungen — hier steht die Leaderboard-URL
+js/config.js        Einstellungen — hier stehen Leaderboard-URL und Preise
 js/utils.js         Mathe, Easing, Zufall, Speicher
+js/player.js        Leben, Kristalle, Power-Up-Vorrat, Tageswechsel
 js/audio.js         Effekte, zur Laufzeit synthetisiert (keine Audiodateien)
 js/particles.js     Partikel, Schockwellen, Lichtstrahlen, Fliegetexte
 js/levels.js        Level-Definitionen
@@ -136,6 +175,7 @@ js/ui.js            Screens und HUD
 js/main.js          Bootstrap, Eingabe, Bildschleife
 server/server.js    Bestenlisten-Server
 test/board.test.js  Tests der Spielfeldlogik
+test/player.test.js Tests für Leben, Kristalle und Käufe
 ```
 
 `board.js` kennt weder Canvas noch DOM und lässt sich deshalb direkt in Node

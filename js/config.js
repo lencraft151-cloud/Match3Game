@@ -51,8 +51,37 @@
     TIME_PER_CASCADE: 0.45,
     TIME_MAX_BONUS_PER_MOVE: 4,
 
+    /* ----------------------------------------------------------- Wirtschaft */
+
+    /* Leben. Ein verlorener Lauf kostet eines; ist keines mehr da, ist fuer
+       heute Schluss — es sei denn, du kaufst dir eines fuer Kristalle. */
+    MAX_LIVES: 5,
+    /* Obergrenze inklusive gekaufter Leben, damit sich niemand einen
+       Riesenvorrat anlegt und das Tageslimit damit aushebelt. */
+    LIVES_CAP: 10,
+
+    /* Kristalle pro geschafftem Level: Grundwert, Zuschlag je Levelstufe und
+       Zuschlag je zwei uebrige Sekunden. */
+    CRYSTALS_BASE: 20,
+    CRYSTALS_PER_LEVEL: 5,
+    CRYSTALS_PER_2_SECONDS: 1,
+
+    /* Preise im Shop. */
+    PRICE_LIFE: 60,
+    PRICE_HAMMER: 40,
+    PRICE_SHUFFLE: 30,
+    PRICE_TIME: 50,
+
+    /* Wirkung des Zeit-Power-Ups in Sekunden. */
+    POWERUP_TIME_BONUS: 15,
+
+    /* Startausstattung fuer neue Spieler — einmal jedes Power-Up zum
+       Ausprobieren, sonst versteht niemand, wofuer die Kristalle gut sind. */
+    STARTING_POWERUPS: { hammer: 1, shuffle: 1, time: 1 },
+
     /* ------------------------------------------------------- Speicherschluessel */
     STORE_SCORES: 'gemcascade.scores.v1',
+    STORE_PLAYER: 'gemcascade.player.v1',
     STORE_NAME: 'gemcascade.name.v1',
     STORE_MUTED: 'gemcascade.muted.v1',
     STORE_PROGRESS: 'gemcascade.progress.v1',
