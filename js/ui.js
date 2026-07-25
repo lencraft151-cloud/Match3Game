@@ -52,6 +52,8 @@
     els.startGoals = $('start-goals');
     els.startMoves = $('start-moves');
     els.startReplay = $('start-replay');
+    els.startLabel = $('start-label');
+    els.startTutorialNote = $('start-tutorial-note');
 
     /* Gewonnen */
     els.winStars = $('win-stars');
@@ -237,8 +239,10 @@
         els.movesBox.classList.add('is-bumped');
       }
       shown.moves = s.movesLeft;
-      els.hudMoves.textContent = s.movesLeft;
-      els.movesBox.classList.toggle('is-low', s.movesLeft <= 5);
+      /* Im Uebungslevel gibt es kein Limit — dann steht dort die Unendlich-
+         Schleife statt einer Zahl, und es wird nie rot. */
+      els.hudMoves.textContent = s.unlimited ? '∞' : s.movesLeft;
+      els.movesBox.classList.toggle('is-low', !s.unlimited && s.movesLeft <= 5);
     }
 
     var key = goalKeyOf(s.goals, s.progress);
@@ -319,9 +323,13 @@
   /* ----------------------------------------------------- Levelstart */
 
   UI.showLevelStart = function (def, isReplay) {
-    els.startLevel.textContent = def.level;
-    els.startMoves.textContent = def.moves;
+    var tutorial = def.unlimited;
+
+    els.startLevel.textContent = tutorial ? 'Übung' : def.level;
+    els.startLabel.hidden = tutorial;
+    els.startMoves.textContent = tutorial ? '∞' : def.moves;
     els.startReplay.hidden = !isReplay;
+    els.startTutorialNote.hidden = !tutorial;
     renderGoalCards(els.startGoals, def.goals, null);
     UI.overlay('screen-levelstart', true);
   };

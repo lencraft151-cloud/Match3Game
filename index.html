@@ -78,21 +78,29 @@
   </div>
 
   <div class="powerbar" id="powerbar" role="group" aria-label="Power-Ups">
-    <button class="power" id="pw-hammer" type="button">
-      <span class="power__icon">&#128296;</span>
+    <button class="power power--hammer" id="pw-hammer" type="button">
+      <span class="power__badge"><span class="power__icon">&#128296;</span></span>
       <span class="power__name">Hammer</span>
+      <span class="power__effect">Kreuz räumen</span>
       <span class="power__count" id="count-hammer">0</span>
     </button>
-    <button class="power" id="pw-shuffle" type="button">
-      <span class="power__icon">&#128256;</span>
+    <button class="power power--shuffle" id="pw-shuffle" type="button">
+      <span class="power__badge"><span class="power__icon">&#128256;</span></span>
       <span class="power__name">Mischen</span>
+      <span class="power__effect">neues Feld</span>
       <span class="power__count" id="count-shuffle">0</span>
     </button>
-    <button class="power" id="pw-moves" type="button">
-      <span class="power__icon">&#10133;</span>
-      <span class="power__name">+7 Züge</span>
+    <button class="power power--moves" id="pw-moves" type="button">
+      <span class="power__badge"><span class="power__icon">&#10133;</span></span>
+      <span class="power__name">Züge</span>
+      <span class="power__effect">+7 Züge</span>
       <span class="power__count" id="count-moves">0</span>
     </button>
+  </div>
+
+  <div class="tutorial" id="tutorial" hidden>
+    <p class="tutorial__text" id="tutorial-text"></p>
+    <button class="btn btn--primary tutorial__next" id="tutorial-next" type="button">Weiter</button>
   </div>
 
   <footer class="game-foot">
@@ -103,7 +111,7 @@
 <!-- ======================== LEVEL-START ========================== -->
 <section class="screen screen--overlay" id="screen-levelstart">
   <div class="panel panel--card">
-    <div class="ribbon">Level <span id="start-level">1</span></div>
+    <div class="ribbon"><span id="start-label">Level </span><span id="start-level">1</span></div>
 
     <p class="card__lead">Schaffe das:</p>
     <ul class="goal-cards" id="start-goals"></ul>
@@ -111,6 +119,9 @@
     <p class="card__moves">Du hast <strong id="start-moves">25</strong> Züge</p>
     <p class="card__replay" id="start-replay" hidden>
       Schon geschafft &mdash; du spielst es für die Sterne noch einmal.
+    </p>
+    <p class="card__replay" id="start-tutorial-note" hidden>
+      Kein Zuglimit, kein Leben, kein Risiko &mdash; hier wird alles erklärt.
     </p>
 
     <div class="menu">
@@ -222,7 +233,8 @@
     <div class="ribbon">So wird gespielt</div>
     <ul class="rules">
       <li><b>Tauschen:</b> Ziehe einen Stein auf ein Nachbarfeld oder tippe beide nacheinander an. Passt der Zug nicht, federt er zurück &mdash; und kostet keinen Zug.</li>
-      <li><b>Ziel:</b> Jedes Level stellt eine Aufgabe. Erfülle sie, bevor die Züge alle sind.</li>
+      <li><b>Ziel:</b> Jedes Level stellt eine Aufgabe. Erfülle sie, bevor die Züge alle sind. Die Zahlen sind bewusst klein &mdash; Level 1 gibt dir nur acht Züge, da zählt jeder einzelne.</li>
+      <li><b>Übungslevel:</b> Der <b>?</b>-Knoten ganz unten auf der Karte hat <b>kein Zuglimit</b>, kostet kein Leben und erklärt alles Schritt für Schritt. Er bleibt dauerhaft offen.</li>
       <li><b>Kaskaden:</b> Nachrutschende Steine, die erneut treffen, erhöhen den Multiplikator &mdash; die dicken Punkte stecken in langen Ketten.</li>
       <li><b>Zug-Finale:</b> Übrige Züge werden am Ende automatisch in Blitze verwandelt. Sparsam spielen lohnt sich.</li>
     </ul>
@@ -261,6 +273,7 @@
 <script src="js/leaderboard.js"></script>
 <script src="js/game.js"></script>
 <script src="js/map.js"></script>
+<script src="js/tutorial.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>

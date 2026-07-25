@@ -24,6 +24,7 @@
   var Player = root.M3.Player;
   var UI = root.M3.UI;
   var Map = root.M3.Map;
+  var Tutorial = root.M3.Tutorial;
   var Game = root.M3.Game;
   var COLORS = root.M3.GEM_COLORS;
 
@@ -204,12 +205,16 @@
   /* Knoten auf der Karte angetippt. Geschaffte Level lassen sich wiederholen,
      um fehlende Sterne nachzuholen. */
   function openLevelStart(level) {
+    Audio.unlock();
+    Audio.mapNode();
+    Audio.popupIn();
     activeLevel = level;
     UI.showLevelStart(Levels.get(level), level < progressState.unlocked);
   }
 
   function beginLevel(level) {
-    if (!Player.hasLife()) {
+    /* Das Uebungslevel kostet nichts und laesst sich nicht verlieren. */
+    if (!Levels.isTutorial(level) && !Player.hasLife()) {
       UI.closeAllOverlays();
       openShop('Keine Leben mehr. Ein Extra-Leben kostet ' + CONFIG.PRICE_LIFE + ' Kristalle.');
       return;
@@ -227,11 +232,22 @@
     layoutBoard();
     game.startLevel(level);
     layoutBoard();
+
+    if (Levels.isTutorial(level)) Tutorial.start();
+    else Tutorial.stop();
   }
 
   var hooks = {
     onStats: function (stats) {
       UI.updateStats(stats);
+      if (Tutorial.isActive() && stats.goals &&
+          root.M3.Goals.allDone(stats.goals, stats.progress)) {
+        Tutorial.notify('goal');
+      }
+    },
+
+    onSwap: function () {
+      Tutorial.notify('swap');
     },
 
     onHint: function (text, warn) {
@@ -239,6 +255,7 @@
     },
 
     onLevelComplete: function (data) {
+      Tutorial.stop();
       lastWin = data;
 
       /* Fortschritt sichern: freischalten und die beste Sternzahl behalten. */
@@ -254,9 +271,18 @@
       Player.earn(crystals);
 
       UI.showWin(data, crystals);
+
+      /* Sterne nacheinander, danach das Kristall-Klimpern. */
+      for (var i = 0; i < data.stars; i++) {
+        (function (n) {
+          root.setTimeout(function () { Audio.star(n); }, 260 + n * 220);
+        })(i);
+      }
+      root.setTimeout(function () { Audio.crystals(); }, 300 + data.stars * 220);
     },
 
     onLevelFailed: function (data) {
+      Audio.popupIn();
       lastFail = data;
       var price = continuePrice();
       UI.showFail(data, price, Player.canAfford(price));
@@ -274,8 +300,15 @@
 
   /* Endgueltig aufgeben: jetzt erst kostet es ein Leben. */
   function giveUpLevel() {
-    Player.loseLife();
-    UI.pulseHearts();
+    Tutorial.stop();
+
+    /* Aus dem Uebungslevel darf man jederzeit raus, ohne etwas zu zahlen. */
+    if (!Levels.isTutorial(activeLevel)) {
+      Player.loseLife();
+      UI.pulseHearts();
+      Audio.lifeLost();
+    }
+
     game.stop();
     openMap();
   }
@@ -294,9 +327,12 @@
     var result = action === 'life' ? Player.buyLife() : Player.buyPowerUp(action);
 
     if (!result.ok) {
+      Audio.denied();
       UI.setShopState(result.reason, 'warn');
       return;
     }
+
+    Audio.purchase();
 
     var label = action === 'life' ? 'Extra-Leben' : Player.ITEMS[action].name;
     UI.setShopState(label + ' gekauft.', 'ok');
@@ -399,6 +435,7 @@
     var el = doc.getElementById(id);
     if (el) el.addEventListener('click', function (e) {
       Audio.unlock();
+      Audio.click();
       handler(e);
     });
   }
@@ -468,6 +505,7 @@
       /* Ein neuer Versuch kostet das Leben fuer den gescheiterten. */
       Player.loseLife();
       UI.pulseHearts();
+      Audio.lifeLost();
       UI.overlay('screen-fail', false);
       beginLevel(activeLevel);
     });
@@ -559,6 +597,7 @@
     root.M3.__game = game;
 
     Map.init({ onSelect: openLevelStart });
+    Tutorial.init();
 
     /* Ein Board vorbereiten, damit das Canvas nie leer dasteht. */
     game.startLevel(progressState.unlocked);

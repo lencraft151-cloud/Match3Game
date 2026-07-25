@@ -87,7 +87,9 @@
     this.totalScore = 0;
     this.levelScore = 0;
     this.movesLeft = 0;
+    this.unlimited = false;   /* Uebungslevel: Zuege zaehlen nicht */
     this.progress = Goals.newProgress(7);
+    this.goalDone = [];
     this.cascade = 0;
     this.finale = null;    /* laufendes Zug-Finale nach dem Sieg */
     /* Tempofaktor fuer Aufloesen und Nachrutschen. Im Zug-Finale laeuft alles
@@ -174,8 +176,10 @@
     this.board.generate(this.def.blockers);
 
     this.levelScore = 0;
+    this.unlimited = !!this.def.unlimited;
     this.movesLeft = this.def.moves;
     this.progress = Goals.newProgress(this.def.colors);
+    this.goalDone = this.def.goals.map(function () { return false; });
     this.cascade = 0;
     this.finale = null;
     this.speed = 1;
@@ -427,7 +431,7 @@
     this.fx.ring(pos.x, pos.y, this.cell * 2.4, '#ffcc4d', 6);
     this.fx.burst(pos.x, pos.y, '#ffcc4d', 18, 1.2);
     this.addShake(9);
-    Audio.explode();
+    Audio.hammer();
 
     /* Steine im Kreuz gehen ueber die normale Aufloesung, damit getroffene
        Spezialsteine mitzuenden. */
@@ -520,8 +524,9 @@
 
     /* Nur ein Zug, der wirklich etwas bewirkt, kostet auch einen. Ein
        Fehlversuch ist frei — sonst bestraft das Spiel Ausprobieren. */
-    if (valid) {
+    if (valid && !this.unlimited) {
       this.movesLeft = Math.max(0, this.movesLeft - 1);
+      if (this.movesLeft > 0 && this.movesLeft <= 3) Audio.lowMoves();
       this.emitStats();
     }
 
@@ -539,6 +544,7 @@
 
     if (valid) {
       Audio.swap();
+      if (this.hooks.onSwap) this.hooks.onSwap();
     } else {
       Audio.invalid();
       this.say('Das bringt keinen Treffer', true);
@@ -685,6 +691,16 @@
 
     this.progress.blockers += blast.blockers.length;
     this.progress.score = this.levelScore;
+
+    /* Klang, sobald eine Aufgabe frisch abgehakt ist. */
+    for (var k = 0; k < this.def.goals.length; k++) {
+      var goal = this.def.goals[k];
+      var done = Goals.isDone(goal, this.progress);
+      if (done && !this.goalDone[k]) {
+        this.goalDone[k] = true;
+        Audio.goalDone();
+      }
+    }
   };
 
   function comboLabel(n) {
@@ -826,7 +842,7 @@
       return;
     }
 
-    if (this.movesLeft <= 0) {
+    if (!this.unlimited && this.movesLeft <= 0) {
       this.levelFailed();
       return;
     }
@@ -854,7 +870,8 @@
 
     this.finaleMovesAtWin = this.movesLeft;
 
-    if (this.movesLeft <= 0) {
+    /* Im Uebungslevel gibt es keine Restzuege, die man verfeuern koennte. */
+    if (this.unlimited || this.movesLeft <= 0) {
       this.completeLevel();
       return;
     }
@@ -903,8 +920,9 @@
     Utils.shuffleArray(Math.random, candidates);
     var picks = candidates.slice(0, batch);
 
-    picks.forEach(function (idx) {
+    picks.forEach(function (idx, i) {
       this.board.cells[idx].special = Math.random() < 0.5 ? SPECIAL.LINE_H : SPECIAL.LINE_V;
+      Audio.finaleZap(i);
     }, this);
 
     this.cascade = 0;
@@ -949,6 +967,7 @@
         levelScore: this.levelScore,
         movesLeft: this.movesLeft,
         movesTotal: this.def.moves,
+        unlimited: this.unlimited,
         goals: this.def.goals,
         progress: this.progress
       });
@@ -966,8 +985,11 @@
     this.emitStats();
 
     /* Bewertet wird der Stand bei Erfuellung der Aufgaben, nicht nach dem
-       Finale — sonst gaebe es immer nur einen Stern. */
-    var stars = Levels.starsFor(this.finaleMovesAtWin || 0, this.def.moves);
+       Finale — sonst gaebe es immer nur einen Stern. Das Uebungslevel gibt
+       immer drei: dort gibt es nichts zu sparen. */
+    var stars = this.unlimited
+      ? 3
+      : Levels.starsFor(this.finaleMovesAtWin || 0, this.def.moves);
 
     Audio.levelUp();
 

@@ -51,8 +51,10 @@ section(`Leveldefinitionen 1 bis ${UP_TO}`);
     if (def.goals.length > 2) {
       problems.push(`Level ${n} hat ${def.goals.length} Aufgaben (max. 2)`);
     }
-    if (!(def.moves >= 15 && def.moves <= 40)) {
-      problems.push(`Level ${n}: ${def.moves} Zuege liegen ausserhalb 15..40`);
+    /* Bewusst kleine Zahlen — aber unter 6 Zuegen ist kein Level mehr
+       spielbar, und ueber 40 waere die Anzeige unuebersichtlich. */
+    if (!(def.moves >= 6 && def.moves <= 40)) {
+      problems.push(`Level ${n}: ${def.moves} Zuege liegen ausserhalb 6..40`);
     }
     if (!(def.colors >= 5 && def.colors <= 7)) {
       problems.push(`Level ${n}: ${def.colors} Farben`);
@@ -107,6 +109,36 @@ section(`Leveldefinitionen 1 bis ${UP_TO}`);
   a.goals[0].count = 999;
   check('Aenderung wirkt sich nicht auf den naechsten Abruf aus',
     Levels.get(5).goals[0].count !== 999);
+}
+
+/* ========================================================================= */
+section('Uebungslevel');
+/* ========================================================================= */
+
+{
+  const tut = Levels.get(Levels.TUTORIAL);
+
+  check('Uebungslevel hat die Nummer 0', tut.level === 0, String(tut.level));
+  check('Uebungslevel ist als unbegrenzt markiert', tut.unlimited === true);
+  check('Uebungslevel hat eine Aufgabe', tut.goals.length === 1);
+  check('Aufgabe ist klein genug zum Ueben', tut.goals[0].count <= 8,
+    String(tut.goals[0].count));
+  check('Aufgabe ist loesbar', Goals.validate(tut.goals[0], tut) === null,
+    String(Goals.validate(tut.goals[0], tut)));
+  check('Keine Felsen im Uebungslevel', tut.blockers === 0);
+  check('Wenige Farben im Uebungslevel', tut.colors === 5);
+
+  check('isTutorial erkennt die 0', Levels.isTutorial(0));
+  check('isTutorial erkennt Level 1 nicht', !Levels.isTutorial(1));
+
+  /* Kein regulaeres Level darf versehentlich unbegrenzt sein — sonst waere
+     es nicht verlierbar. */
+  let unlimitedRegular = 0;
+  for (let n = 1; n <= UP_TO; n++) {
+    if (Levels.get(n).unlimited) unlimitedRegular++;
+  }
+  check('Kein regulaeres Level ist unbegrenzt', unlimitedRegular === 0,
+    String(unlimitedRegular));
 }
 
 /* ========================================================================= */

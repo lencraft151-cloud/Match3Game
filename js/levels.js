@@ -33,41 +33,56 @@
   /* colors, blockers, moves, goals
 
      Die Zahlen stammen aus `node test/balance.js`: ein Bot spielt jedes Level
-     50-mal und die Erfolgsquote wird abgelesen. Stand der letzten Messung
-     liegen Level 1 bis 48 alle zwischen 56 und 88 Prozent, mit leichtem
-     Gefaelle nach hinten. Der Bot plant nichts, ein Mensch liegt darueber. */
+     80-mal und die Erfolgsquote wird abgelesen. Der Bot plant nichts, ein
+     Mensch liegt darueber.
+
+     Bewusst kleine Zahlen: wenige Zuege, kleine Ziele. Dadurch zaehlt jeder
+     einzelne Zug sichtbar — kostet aber Berechenbarkeit, weil bei acht
+     Zuegen ein einziger Gluecksfall stark durchschlaegt. Die Zugzahlen sind
+     deshalb einzeln gemessen und nicht proportional herunterskaliert. */
+  /* Uebungslevel ohne Zuglimit. Es steht vor Level 1, ist immer spielbar und
+     laesst sich nicht verlieren — hier wird nur erklaert. */
+  var TUTORIAL = {
+    colors: 5,
+    blockers: 0,
+    moves: 0,
+    unlimited: true,
+    goals: [C(0, 5)]
+  };
+
   var HANDMADE = [
-    /* 1-3 — Aufwaermen: fuenf Farben, nur Sammelaufgaben. */
-    { colors: 5, blockers: 0, moves: 20, goals: [C(0, 12)] },
-    { colors: 5, blockers: 0, moves: 20, goals: [C(3, 15)] },
-    { colors: 5, blockers: 0, moves: 22, goals: [C(0, 13), C(2, 13)] },
+    /* 1-3 — Aufwaermen: fuenf Farben, nur Sammelaufgaben. Bewusst kleine
+       Zahlen und knappe Zuege: so zaehlt jeder einzelne sichtbar. */
+    { colors: 5, blockers: 0, moves: 8, goals: [C(0, 6)] },
+    { colors: 5, blockers: 0, moves: 10, goals: [C(3, 8)] },
+    { colors: 5, blockers: 0, moves: 12, goals: [C(0, 7), C(2, 7)] },
 
     /* 4-5 — die sechste Farbe und die ersten Felsen. */
-    { colors: 6, blockers: 9, moves: 20, goals: [B(5)] },
-    { colors: 6, blockers: 7, moves: 27, goals: [C(1, 14), B(3)] },
+    { colors: 6, blockers: 9, moves: 10, goals: [B(4)] },
+    { colors: 6, blockers: 7, moves: 15, goals: [C(1, 8), B(3)] },
 
     /* 6 — erste reine Punkteaufgabe. */
-    { colors: 6, blockers: 0, moves: 24, goals: [S(8500)] },
+    { colors: 6, blockers: 0, moves: 12, goals: [S(4500)] },
 
-    { colors: 6, blockers: 11, moves: 23, goals: [B(6)] },
-    { colors: 6, blockers: 7, moves: 28, goals: [C(4, 14), B(3)] },
+    { colors: 6, blockers: 11, moves: 16, goals: [B(6)] },
+    { colors: 6, blockers: 7, moves: 15, goals: [C(4, 8), B(3)] },
 
     /* 9 — die siebte Farbe. Treffer werden spuerbar seltener, deshalb
-       steigen ab hier die Zugzahlen deutlich. */
-    { colors: 7, blockers: 0, moves: 33, goals: [C(2, 13), C(5, 13)] },
-    { colors: 7, blockers: 13, moves: 24, goals: [B(8)] },
+       steigen ab hier die Zugzahlen wieder etwas. */
+    { colors: 7, blockers: 0, moves: 20, goals: [C(2, 7), C(5, 7)] },
+    { colors: 7, blockers: 13, moves: 17, goals: [B(7)] },
 
-    { colors: 7, blockers: 0, moves: 26, goals: [S(10000)] },
-    { colors: 7, blockers: 9, moves: 28, goals: [C(0, 12), B(4)] },
-    { colors: 7, blockers: 0, moves: 30, goals: [C(1, 12), C(3, 12)] },
-    { colors: 7, blockers: 16, moves: 24, goals: [B(10)] },
-    { colors: 7, blockers: 7, moves: 32, goals: [C(6, 13), B(3)] },
+    { colors: 7, blockers: 0, moves: 14, goals: [S(5500)] },
+    { colors: 7, blockers: 9, moves: 18, goals: [C(0, 7), B(4)] },
+    { colors: 7, blockers: 0, moves: 21, goals: [C(1, 7), C(3, 7)] },
+    { colors: 7, blockers: 16, moves: 20, goals: [B(9)] },
+    { colors: 7, blockers: 7, moves: 18, goals: [C(6, 8), B(3)] },
 
-    { colors: 7, blockers: 0, moves: 26, goals: [S(10500)] },
-    { colors: 7, blockers: 12, moves: 29, goals: [C(2, 13), B(5)] },
-    { colors: 7, blockers: 0, moves: 30, goals: [C(0, 12), C(4, 12)] },
-    { colors: 7, blockers: 18, moves: 27, goals: [B(11)] },
-    { colors: 7, blockers: 12, moves: 30, goals: [C(5, 13), B(5)] }
+    { colors: 7, blockers: 0, moves: 15, goals: [S(6000)] },
+    { colors: 7, blockers: 12, moves: 16, goals: [C(2, 7), B(5)] },
+    { colors: 7, blockers: 0, moves: 22, goals: [C(0, 8), C(4, 8)] },
+    { colors: 7, blockers: 18, moves: 20, goals: [B(10)] },
+    { colors: 7, blockers: 12, moves: 17, goals: [C(5, 8), B(5)] }
   ];
 
   var Levels = {};
@@ -105,8 +120,8 @@
     if (pattern === 0) {
       /* Eine Farbe sammeln. */
       blockers = 0;
-      moves = 32;
-      goals = [C(beyond % colors, Math.min(15, 12 + grow))];
+      moves = 17;
+      goals = [C(beyond % colors, Math.min(9, 7 + Math.floor(grow / 3)))];
 
     } else if (pattern === 1) {
       /* Felsen raeumen. Entscheidend ist nicht die Zugzahl, sondern wie viele
@@ -114,24 +129,24 @@
          9 Felsen im Schnitt 5,5, bei 6 nur 3,5. Das Ziel liegt deshalb bei
          rund 60 % der gesetzten Felsen, die Zuege bleiben knapp. */
       blockers = Math.min(18, 12 + grow);
-      moves = 24 + Math.floor(grow / 3);
-      goals = [B(Math.round(blockers * 0.65))];
+      moves = 17 + Math.floor(grow / 2);
+      goals = [B(Math.round(blockers * 0.55))];
 
     } else if (pattern === 2) {
       /* Zwei Farben gleichzeitig — die teuerste Aufgabe. */
       blockers = 0;
-      moves = 34;
+      moves = 21;
       goals = [
-        C(beyond % colors, Math.min(15, 13 + grow)),
-        C((beyond + 3) % colors, Math.min(15, 13 + grow))
+        C(beyond % colors, Math.min(9, 7 + Math.floor(grow / 3))),
+        C((beyond + 3) % colors, Math.min(9, 7 + Math.floor(grow / 3)))
       ];
 
     } else {
       /* Punkte plus Felsen. */
       blockers = Math.min(14, 8 + grow);
-      moves = 31;
+      moves = 18;
       goals = [
-        S(Math.min(15000, 13000 + step * 500)),
+        S(Math.min(8000, 6500 + step * 300)),
         B(Math.round(Math.min(14, 8 + grow) * 0.55))
       ];
     }
@@ -139,16 +154,29 @@
     return { colors: colors, blockers: blockers, moves: moves, goals: goals };
   }
 
-  /* Liefert die Definition fuer eine Stufe (1-basiert). Die Aufgaben werden
-     bei jedem Aufruf frisch erzeugt, damit ein Level sie nicht versehentlich
-     mit einem anderen teilt. */
+  /* Levelnummer des Uebungslevels. */
+  Levels.TUTORIAL = 0;
+
+  Levels.isTutorial = function (level) {
+    return Math.floor(level) === Levels.TUTORIAL;
+  };
+
+  /* Liefert die Definition fuer eine Stufe. 0 ist das Uebungslevel, ab 1
+     geht es regulaer los. Die Aufgaben werden bei jedem Aufruf frisch
+     erzeugt, damit ein Level sie nicht versehentlich mit einem anderen
+     teilt. */
   Levels.get = function (level) {
-    var n = Math.max(1, Math.floor(level) || 1);
-    var base = n <= HANDMADE.length ? HANDMADE[n - 1] : generated(n);
+    var n = Math.floor(level);
+    if (!(n >= 0)) n = 1;
+
+    var base = n === Levels.TUTORIAL ? TUTORIAL
+             : n <= HANDMADE.length ? HANDMADE[n - 1]
+             : generated(n);
 
     return {
       level: n,
       moves: base.moves,
+      unlimited: !!base.unlimited,
       colors: base.colors,
       blockers: base.blockers,
       goals: base.goals.map(function (g) {

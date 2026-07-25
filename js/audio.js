@@ -191,6 +191,88 @@
     });
   };
 
+  /* ---------------------------------------------------- Oberflaeche */
+
+  /* Kurzer, trockener Klick fuer jeden Knopf. */
+  Audio.click = function () {
+    tone({ type: 'square', freq: 520, freqTo: 720, duration: 0.05, gain: 0.09 });
+  };
+
+  /* Popup faehrt auf. */
+  Audio.popupIn = function () {
+    tone({ type: 'sine', freq: 300, freqTo: 620, duration: 0.18, gain: 0.14 });
+  };
+
+  /* Popup verschwindet. */
+  Audio.popupOut = function () {
+    tone({ type: 'sine', freq: 560, freqTo: 260, duration: 0.14, gain: 0.11 });
+  };
+
+  /* Knoten auf der Landkarte. */
+  Audio.mapNode = function () {
+    tone({ type: 'triangle', freq: 620, freqTo: 880, duration: 0.12, gain: 0.15 });
+  };
+
+  /* ----------------------------------------------------- Belohnungen */
+
+  /* Ein Stern fliegt ins Ergebnisfenster. Der Index hebt die Tonhoehe an,
+     damit drei Sterne wie ein aufsteigender Dreiklang klingen. */
+  Audio.star = function (index) {
+    var base = 660 * Math.pow(2, (index || 0) / 6);
+    tone({ type: 'triangle', freq: base, freqTo: base * 1.5, duration: 0.32, gain: 0.22 });
+    tone({ type: 'sine', freq: base * 2, duration: 0.22, gain: 0.12, delay: 0.04 });
+  };
+
+  /* Kristalle werden gutgeschrieben — kleines Klimpern. */
+  Audio.crystals = function () {
+    [0, 0.06, 0.12].forEach(function (d, i) {
+      tone({ type: 'sine', freq: 1200 + i * 260, duration: 0.14, gain: 0.13, delay: d });
+    });
+  };
+
+  /* Kauf abgeschlossen. */
+  Audio.purchase = function () {
+    tone({ type: 'triangle', freq: 520, duration: 0.1, gain: 0.16 });
+    tone({ type: 'triangle', freq: 780, duration: 0.16, gain: 0.16, delay: 0.08 });
+    tone({ type: 'sine', freq: 1560, duration: 0.2, gain: 0.09, delay: 0.12 });
+  };
+
+  /* Kauf nicht moeglich. */
+  Audio.denied = function () {
+    tone({ type: 'square', freq: 240, freqTo: 160, duration: 0.14, gain: 0.11 });
+  };
+
+  /* Eine Aufgabe ist erfuellt. */
+  Audio.goalDone = function () {
+    tone({ type: 'sine', freq: 880, duration: 0.14, gain: 0.18 });
+    tone({ type: 'sine', freq: 1320, duration: 0.24, gain: 0.15, delay: 0.09 });
+  };
+
+  /* -------------------------------------------------------- Im Spiel */
+
+  /* Hammerschlag — trockener als eine Bombe. */
+  Audio.hammer = function () {
+    noise({ duration: 0.2, cutoff: 3200, gain: 0.3 });
+    tone({ type: 'square', freq: 220, freqTo: 60, duration: 0.18, gain: 0.24 });
+  };
+
+  /* Ein Blitz im Zug-Finale. */
+  Audio.finaleZap = function (index) {
+    var base = 700 + ((index || 0) % 6) * 90;
+    tone({ type: 'sawtooth', freq: base, freqTo: base * 0.4, duration: 0.16, gain: 0.15 });
+  };
+
+  /* Ein Leben ist weg. */
+  Audio.lifeLost = function () {
+    tone({ type: 'sine', freq: 420, freqTo: 180, duration: 0.38, gain: 0.2 });
+  };
+
+  /* Zuege werden knapp. */
+  Audio.lowMoves = function () {
+    tone({ type: 'square', freq: 660, duration: 0.08, gain: 0.12 });
+    tone({ type: 'square', freq: 520, duration: 0.1, gain: 0.1, delay: 0.1 });
+  };
+
   root.M3.Audio = Audio;
 
 })(typeof globalThis !== 'undefined' ? globalThis : this);

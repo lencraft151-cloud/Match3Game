@@ -26,9 +26,12 @@ node server/server.js           # http://localhost:8080, inklusive Bestenliste
 
 ## So läuft das Spiel
 
-Auf der **Landkarte** liegen die Level als Bahn aus nummerierten Knoten. Zu
-Beginn ist nur Level 1 offen; jedes geschaffte Level schaltet genau eines
-frei. Das aktuelle trägt eine Krone, geschaffte zeigen ihre Sterne und
+Ganz unten auf der **Landkarte** sitzt der **?**-Knoten: ein Übungslevel
+**ohne Zuglimit**, das kein Leben kostet, sich nicht verlieren lässt und das
+Spiel Schritt für Schritt erklärt. Es bleibt dauerhaft offen.
+
+Darüber liegen die Level als Bahn aus nummerierten Knoten. Zu Beginn ist nur
+Level 1 offen; jedes geschaffte Level schaltet genau eines frei. Das aktuelle trägt eine Krone, geschaffte zeigen ihre Sterne und
 lassen sich für fehlende Sterne wiederholen, der Rest ist gesperrt. Ein Tipp auf den Knoten öffnet die Levelkarte mit Aufgabe und
 Zugzahl.
 
@@ -54,6 +57,10 @@ doppelt aus — in Punkten und in Sternen.
 
 Ein Level stellt eine oder zwei davon. Oben im HUD stehen sie als Marke mit
 Restzahl und werden abgehakt, sobald sie erfüllt sind.
+
+Die Zahlen sind bewusst **klein und knapp**: Level 1 verlangt sechs Rubine in
+acht Zügen. Damit zählt jeder einzelne Zug sichtbar, und ein Level ist in
+zwei Minuten gespielt.
 
 ### Sterne
 
@@ -156,8 +163,12 @@ node test/balance.js 1 60 100   # Level 1–60, je 100 Versuche
 
 Ein Bot spielt stur den erstbesten gültigen Zug und plant nichts. Zielkorridor
 ist eine Erfolgsquote von **60 bis 85 Prozent** — ein Mensch liegt darüber.
-Stand der letzten Messung liegen Level 1–48 alle zwischen **56 und 88
-Prozent**, mit leichtem Gefälle nach hinten.
+Stand der letzten Messung liegen Level 1–36 alle zwischen **58 und 87
+Prozent**, dicht um 65–75 herum.
+
+Kleine Zahlen sind dabei schwerer, als es proportional aussieht: bei acht
+Zügen schlägt ein einziger Glücksfall stark durch. Die Zugzahlen sind
+deshalb einzeln gemessen und nicht heruntergerechnet.
 
 Bei Felsen entscheidet übrigens nicht die Zugzahl, sondern wie viele
 überhaupt auf dem Feld liegen: bei 6 gesetzten Felsen schafft der Bot nur in
@@ -175,7 +186,7 @@ späten Leveln unerreichbar.
 ```bash
 node test/board.test.js     # 43 Prüfungen — Spielfeldlogik
 node test/player.test.js    # 57 Prüfungen — Leben, Kristalle, Käufe
-node test/levels.test.js    # 31 Prüfungen — Level und Aufgaben
+node test/levels.test.js    # 41 Prüfungen — Level, Aufgaben, Übungslevel
 ```
 
 Ohne Framework und ohne Browser.
@@ -206,6 +217,7 @@ js/levels.js        Leveldefinitionen und Sternewertung
 js/board.js         Spielfeldlogik — ohne DOM, in Node testbar
 js/game.js          Zustandsautomat, Züge, Animationen, Canvas-Rendering
 js/map.js           Level-Landkarte
+js/tutorial.js      Erklärschritte im Übungslevel
 js/leaderboard.js   Online-Client mit lokalem Fallback
 js/ui.js            Screens, HUD, Popups
 js/main.js          Bootstrap, Eingabe, Ablaufsteuerung

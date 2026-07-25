@@ -67,7 +67,8 @@
   Map.render = function (unlocked, stars) {
     if (!els) return;
 
-    var count = unlocked + LOOKAHEAD;
+    /* Ein Knoten mehr: das Uebungslevel sitzt vor Level 1. */
+    var count = unlocked + LOOKAHEAD + 1;
     var width = els.scroll.clientWidth || 360;
     var height = PAD_TOP + PAD_BOTTOM + count * SPACING;
 
@@ -91,8 +92,8 @@
     var frag = doc.createDocumentFragment();
 
     for (var n = 0; n < count; n++) {
-      var level = n + 1;
-      frag.appendChild(makeNode(level, xFor(n, width), yFor(n, height), unlocked, stars));
+      /* Index 0 ist das Uebungslevel (Levelnummer 0). */
+      frag.appendChild(makeNode(n, xFor(n, width), yFor(n, height), unlocked, stars));
     }
 
     els.nodes.textContent = '';
@@ -100,7 +101,8 @@
   };
 
   function makeNode(level, x, y, unlocked, stars) {
-    var done = level < unlocked;
+    var tutorial = level === 0;
+    var done = !tutorial && level < unlocked;
     var current = level === unlocked;
     var earned = (stars && stars[level]) || 0;
 
@@ -113,15 +115,18 @@
     button.type = 'button';
     button.dataset.level = level;
     button.className = 'node' +
+      (tutorial ? ' node--tutorial' : '') +
       (done ? ' node--done' : '') +
       (current ? ' node--current' : '') +
-      (!done && !current ? ' node--locked' : '');
+      (!tutorial && !done && !current ? ' node--locked' : '');
 
-    button.disabled = !done && !current;
-    button.textContent = level;
+    /* Das Uebungslevel ist immer offen. */
+    button.disabled = !tutorial && !done && !current;
+    button.textContent = tutorial ? '?' : level;
 
     button.setAttribute('aria-label',
-      'Level ' + level + (button.disabled ? ' (gesperrt)'
+      tutorial ? 'Übungslevel — hier wird alles erklärt'
+      : 'Level ' + level + (button.disabled ? ' (gesperrt)'
         : done ? ' (geschafft, ' + earned + ' von 3 Sternen — nochmal spielen)'
                : ' (jetzt spielen)'));
 
