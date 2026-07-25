@@ -41,6 +41,9 @@ jobs:
       - name: Leben und Kristalle
         run: node test/player.test.js
 
+      - name: Level und Aufgaben
+        run: node test/levels.test.js
+
   deploy:
     name: Veroeffentlichen
     needs: test

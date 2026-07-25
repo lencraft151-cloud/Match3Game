@@ -1,8 +1,14 @@
 /* ==========================================================================
-   Main — Bootstrap, Eingabe, Bildschleife.
+   Main — Bootstrap, Eingabe, Bildschleife, Ablaufsteuerung.
 
-   Haelt Spiel und Oberflaeche zusammen: game.js meldet ueber Hooks, was
-   passiert ist, main.js entscheidet, welcher Screen zu sehen ist.
+   Der Weg durch das Spiel:
+
+       Titel -> Karte -> Levelstart-Popup -> Spiel
+                  ^                            |
+                  +---- Gewonnen / Verloren <--+
+
+   game.js meldet ueber Hooks, was passiert ist; hier faellt die Entscheidung,
+   welcher Screen zu sehen ist und was das fuer Leben und Kristalle bedeutet.
    ========================================================================== */
 
 (function (root) {
@@ -13,9 +19,11 @@
   var Utils = root.M3.Utils;
   var CONFIG = root.M3.CONFIG;
   var Audio = root.M3.Audio;
+  var Levels = root.M3.Levels;
   var Leaderboard = root.M3.Leaderboard;
   var Player = root.M3.Player;
   var UI = root.M3.UI;
+  var Map = root.M3.Map;
   var Game = root.M3.Game;
   var COLORS = root.M3.GEM_COLORS;
 
@@ -24,8 +32,48 @@
   var clock = 0;
   var lastFrame = 0;
 
-  /* Hoechstes freigespieltes Level — erlaubt den Wiedereinstieg. */
-  var unlocked = Math.max(1, parseInt(Utils.storeGet(CONFIG.STORE_PROGRESS, 1), 10) || 1);
+  /* ------------------------------------------------------------ Spielstand */
+
+  /* Hoechstes freigeschaltetes Level und die Sterne je Level. Beides liegt
+     unter demselben Schluessel wie bisher, damit alte Spielstaende nicht
+     verloren gehen — fruehere Versionen speicherten dort nur eine Zahl. */
+  var progressState = loadProgress();
+
+  function loadProgress() {
+    var raw = Utils.storeGet(CONFIG.STORE_PROGRESS, null);
+
+    /* Alte Version: nur die Levelnummer. */
+    if (typeof raw === 'number') {
+      return { unlocked: Math.max(1, Math.floor(raw)), stars: {} };
+    }
+
+    if (raw && typeof raw === 'object') {
+      return {
+        unlocked: Math.max(1, Math.floor(raw.unlocked) || 1),
+        stars: (raw.stars && typeof raw.stars === 'object') ? raw.stars : {}
+      };
+    }
+
+    return { unlocked: 1, stars: {} };
+  }
+
+  function saveProgress() {
+    Utils.storeSet(CONFIG.STORE_PROGRESS, progressState);
+  }
+
+  /* Laufende Gesamtpunkte ueber alle Level — das ist der Wert fuer die
+     Bestenliste. */
+  var lifetimeScore = Math.max(0, parseInt(Utils.storeGet(CONFIG.STORE_LIFETIME, 0), 10) || 0);
+
+  /* Zustand des gerade laufenden Levels. */
+  var activeLevel = 1;
+  var continuesUsed = 0;
+  var lastWin = null;
+  var lastFail = null;
+
+  function continuePrice() {
+    return CONFIG.CONTINUE_PRICE + continuesUsed * CONFIG.CONTINUE_PRICE_STEP;
+  }
 
   /* ====================================================================== */
   /*  Hintergrund-Steine                                                    */
@@ -37,7 +85,6 @@
     this.gems = [];
     this.w = 0;
     this.h = 0;
-    /* Bei "reduzierte Bewegung" treiben weniger Steine, und langsamer. */
     this.slow = Utils.prefersReducedMotion() ? 0.25 : 1;
     this.resize();
   }
@@ -66,7 +113,7 @@
       vrot: (Math.random() - 0.5) * 0.5,
       vy: -(8 + Math.random() * 22),
       vx: (Math.random() - 0.5) * 14,
-      alpha: 0.05 + Math.random() * 0.12
+      alpha: 0.05 + Math.random() * 0.1
     };
   };
 
@@ -78,10 +125,7 @@
       g.y += g.vy * step;
       g.x += g.vx * step;
       g.rot += g.vrot * step;
-
-      if (g.y < -80) {
-        this.gems[i] = this.makeGem(false);
-      }
+      if (g.y < -80) this.gems[i] = this.makeGem(false);
     }
   };
 
@@ -108,35 +152,33 @@
   /*  Layout                                                                */
   /* ====================================================================== */
 
-  /* Auf Mobilgeraeten ist 100vh groesser als der sichtbare Bereich, weil die
-     Browserleiste mitgerechnet wird — daher eine eigene Variable. */
   function setViewportUnit() {
     doc.documentElement.style.setProperty('--vh', root.innerHeight + 'px');
   }
 
-  /* Das Brett bekommt genau den Platz, der zwischen HUD und Fusszeile uebrig
-     bleibt. Die Groesse aus dem Wrapper abzuleiten funktioniert nicht: der
-     Wrapper richtet sich nach dem Canvas, das waere ein Zirkelschluss. */
+  /* Das Brett bekommt den Platz zwischen HUD, Power-Leiste und Fusszeile. */
   function layoutBoard() {
     var screen = doc.getElementById('screen-game');
     var hud = doc.querySelector('.hud');
+    var bar = doc.getElementById('powerbar');
     var foot = doc.querySelector('.game-foot');
     if (!screen || !game) return;
 
     var style = root.getComputedStyle(screen);
     var padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
     var padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-    var gaps = parseFloat(style.rowGap || style.gap) * 2 || 20;
+    var gaps = (parseFloat(style.rowGap || style.gap) || 10) * 3;
 
     var availableW = screen.clientWidth - padX;
     var availableH = screen.clientHeight - padY - gaps -
-      (hud ? hud.offsetHeight : 0) - (foot ? foot.offsetHeight : 0);
+      (hud ? hud.offsetHeight : 0) -
+      (bar ? bar.offsetHeight : 0) -
+      (foot ? foot.offsetHeight : 0);
 
     var size = Math.min(availableW, availableH, 560);
 
-    /* Waehrend eines Screen-Wechsels koennen die Hoehen kurz 0 sein. */
     if (!isFinite(size) || size < 40) {
-      size = Math.min(root.innerWidth - 32, root.innerHeight - 220, 560);
+      size = Math.min(root.innerWidth - 32, root.innerHeight - 300, 560);
     }
 
     game.resize(Utils.clamp(size, 200, 560));
@@ -146,47 +188,47 @@
     setViewportUnit();
     if (backdrop) backdrop.resize();
     layoutBoard();
+    if (UI.current() === 'screen-map') Map.render(progressState.unlocked, progressState.stars);
   }
 
   /* ====================================================================== */
-  /*  Spielsteuerung                                                        */
+  /*  Ablauf                                                                */
   /* ====================================================================== */
 
-  /* Ohne Leben geht nichts los — dann direkt in den Shop, statt den Knopf
-     wirkungslos verpuffen zu lassen. */
-  function startRun(level) {
+  function openMap(scrollSmooth) {
+    UI.closeAllOverlays();
+    UI.refreshWallet();
+    UI.show('screen-map');
+    Map.render(progressState.unlocked, progressState.stars);
+    Map.scrollToCurrent(progressState.unlocked, !!scrollSmooth);
+  }
+
+  /* Knoten auf der Karte angetippt. */
+  function openLevelStart(level) {
+    activeLevel = level;
+    UI.showLevelStart(Levels.get(level));
+  }
+
+  function beginLevel(level) {
     if (!Player.hasLife()) {
-      openShop('Keine Versuche mehr heute. Ein Extra-Leben kostet ' +
-        CONFIG.PRICE_LIFE + ' Kristalle.');
+      UI.closeAllOverlays();
+      openShop('Keine Leben mehr. Ein Extra-Leben kostet ' + CONFIG.PRICE_LIFE + ' Kristalle.');
       return;
     }
 
+    activeLevel = level;
+    continuesUsed = 0;
+
+    UI.closeAllOverlays();
     UI.resetStatCache();
-    UI.overlay('screen-pause', false);
-    UI.overlay('screen-level', false);
-    UI.overlay('screen-over', false);
     UI.show('screen-game');
 
     /* Erst nach dem Screen-Wechsel messen — vorher hat der Wrapper noch
        nicht seine endgueltige Groesse. */
     layoutBoard();
-    game.startRun(level);
+    game.startLevel(level);
     layoutBoard();
   }
-
-  function nextLevel(data) {
-    UI.overlay('screen-level', false);
-    unlocked = Math.max(unlocked, data.nextLevel);
-    Utils.storeSet(CONFIG.STORE_PROGRESS, unlocked);
-    UI.setContinue(unlocked);
-    UI.resetStatCache();
-    game.startLevel(data.nextLevel, data.carry);
-    layoutBoard();
-  }
-
-  var lastGameOver = null;
-  /* Das Level-Panel braucht die Daten noch beim Klick auf "Weiter". */
-  var lastLevelData = null;
 
   var hooks = {
     onStats: function (stats) {
@@ -198,21 +240,27 @@
     },
 
     onLevelComplete: function (data) {
-      lastLevelData = data;
-      var crystals = Player.crystalsForLevel(data.level, data.secondsLeft);
+      lastWin = data;
+
+      /* Fortschritt sichern: freischalten und die beste Sternzahl behalten. */
+      var best = progressState.stars[data.level] || 0;
+      progressState.stars[data.level] = Math.max(best, data.stars);
+      progressState.unlocked = Math.max(progressState.unlocked, data.nextLevel);
+      saveProgress();
+
+      lifetimeScore += data.levelScore;
+      Utils.storeSet(CONFIG.STORE_LIFETIME, lifetimeScore);
+
+      var crystals = Player.crystalsForLevel(data.level, data.stars);
       Player.earn(crystals);
-      UI.showLevelComplete(data, crystals);
+
+      UI.showWin(data, crystals);
     },
 
-    onGameOver: function (data) {
-      lastGameOver = data;
-
-      /* Ein verlorener Lauf kostet einen der Tagesversuche. */
-      Player.loseLife();
-      UI.pulseHearts();
-
-      var isRecord = data.score > 0 && data.score > Leaderboard.localBest();
-      UI.showGameOver(data, isRecord);
+    onLevelFailed: function (data) {
+      lastFail = data;
+      var price = continuePrice();
+      UI.showFail(data, price, Player.canAfford(price));
     },
 
     onArmChange: function (key) {
@@ -224,6 +272,14 @@
       UI.refreshPowerBar();
     }
   };
+
+  /* Endgueltig aufgeben: jetzt erst kostet es ein Leben. */
+  function giveUpLevel() {
+    Player.loseLife();
+    UI.pulseHearts();
+    game.stop();
+    openMap();
+  }
 
   /* ====================================================================== */
   /*  Shop und Power-Ups                                                    */
@@ -253,7 +309,6 @@
   function usePower(key) {
     if (!game.acceptsInput()) return;
 
-    /* Der scharfe Hammer laesst sich durch erneutes Antippen entschaerfen. */
     if (key === 'hammer' && game.armed === 'hammer') {
       game.disarm();
       return;
@@ -263,7 +318,7 @@
 
     if (key === 'hammer') game.armHammer();
     else if (key === 'shuffle') game.usePowerShuffle();
-    else if (key === 'time') game.usePowerTime();
+    else if (key === 'moves') game.usePowerMoves();
   }
 
   /* ====================================================================== */
@@ -291,7 +346,6 @@
     });
 
     canvas.addEventListener('pointermove', function (e) {
-      /* Nur waehrend eines gedrueckten Zeigers relevant. */
       if (e.buttons === 0 && e.pointerType === 'mouse') return;
       var p = canvasPoint(canvas, e);
       game.pointerMove(p.x, p.y);
@@ -299,7 +353,6 @@
 
     canvas.addEventListener('pointerup', function () { game.pointerUp(); });
     canvas.addEventListener('pointercancel', function () { game.pointerUp(); });
-
     canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); });
   }
 
@@ -333,7 +386,7 @@
   }
 
   /* ====================================================================== */
-  /*  Buttons                                                               */
+  /*  Knoepfe                                                               */
   /* ====================================================================== */
 
   function on(id, handler) {
@@ -345,27 +398,82 @@
   }
 
   function bindButtons() {
-    on('btn-play', function () { startRun(1); });
-    on('btn-continue', function () { startRun(unlocked); });
+    /* --- Titel --- */
+    on('btn-start', function () { openMap(); });
+    on('btn-help', function () { UI.show('screen-help'); });
+    on('btn-help-back', function () {
+      UI.show(progressState.unlocked > 1 ? 'screen-map' : 'screen-title');
+      if (UI.current() === 'screen-map') openMap();
+    });
 
+    /* --- Karte --- */
+    on('btn-shop', function () { openShop(); });
+    on('btn-map-help', function () { UI.show('screen-help'); });
     on('btn-scores', function () {
-      UI.prepareScoreScreen();
+      UI.prepareScoreScreen(lifetimeScore);
       UI.show('screen-scores');
       UI.loadScores();
     });
 
-    on('btn-help', function () { UI.show('screen-help'); });
-    on('btn-help-back', function () { UI.show('screen-start'); });
-    on('btn-scores-back', function () { UI.show('screen-start'); });
+    /* --- Levelstart --- */
+    on('btn-level-play', function () { beginLevel(activeLevel); });
+    on('btn-level-back', function () { UI.overlay('screen-levelstart', false); });
 
-    on('btn-shop', function () { openShop(); });
-    on('btn-shop-back', function () {
-      UI.refreshWallet();
-      UI.show('screen-start');
+    /* --- Spiel --- */
+    on('btn-pause', togglePause);
+    on('btn-resume', togglePause);
+
+    on('btn-restart', function () {
+      UI.overlay('screen-pause', false);
+      beginLevel(activeLevel);
     });
 
-    /* Ein Listener fuer alle Kaufknoepfe — die Zeilen werden bei jedem
-       Kauf neu aufgebaut, einzelne Listener waeren sofort veraltet. */
+    /* Mitten im Level zur Karte: gilt als Aufgeben. */
+    on('btn-quit', giveUpLevel);
+
+    on('pw-hammer', function () { usePower('hammer'); });
+    on('pw-shuffle', function () { usePower('shuffle'); });
+    on('pw-moves', function () { usePower('moves'); });
+
+    /* --- Gewonnen --- */
+    on('btn-win-next', function () {
+      UI.overlay('screen-win', false);
+      openMap(true);
+    });
+
+    /* --- Verloren --- */
+    on('btn-continue-buy', function () {
+      var price = continuePrice();
+      if (!Player.canAfford(price)) {
+        UI.setContinueState('Dafür fehlen dir ' +
+          (price - Player.snapshot().crystals) + ' Kristalle.', 'warn');
+        return;
+      }
+
+      Player.spend(price);
+      continuesUsed++;
+
+      UI.overlay('screen-fail', false);
+      UI.refreshWallet();
+      game.grantMoves(CONFIG.CONTINUE_MOVES);
+    });
+
+    on('btn-fail-retry', function () {
+      /* Ein neuer Versuch kostet das Leben fuer den gescheiterten. */
+      Player.loseLife();
+      UI.pulseHearts();
+      UI.overlay('screen-fail', false);
+      beginLevel(activeLevel);
+    });
+
+    on('btn-fail-map', giveUpLevel);
+
+    /* --- Shop --- */
+    on('btn-shop-back', function () {
+      UI.refreshWallet();
+      openMap();
+    });
+
     doc.getElementById('shop-list').addEventListener('click', function (e) {
       var button = e.target.closest ? e.target.closest('[data-buy]') : null;
       if (!button || button.disabled) return;
@@ -373,80 +481,30 @@
       buy(button.dataset.buy);
     });
 
-    on('pw-hammer', function () { usePower('hammer'); });
-    on('pw-shuffle', function () { usePower('shuffle'); });
-    on('pw-time', function () { usePower('time'); });
-
-    on('btn-buy-life', function () {
-      var result = Player.buyLife();
-      if (!result.ok) {
-        UI.setReviveState(result.reason, 'warn');
-        return;
-      }
-      UI.setReviveState('Leben gekauft — auf geht’s!', 'ok');
-      UI.refreshLivesOnGameOver();
-    });
-
+    /* --- Bestenliste --- */
     on('tab-online', function () { UI.setScoreTab('online'); UI.loadScores(); });
     on('tab-local', function () { UI.setScoreTab('local'); UI.loadScores(); });
-
-    on('btn-pause', togglePause);
-    on('btn-resume', togglePause);
-
-    on('btn-restart', function () {
-      UI.overlay('screen-pause', false);
-      UI.resetStatCache();
-      game.startLevel(game.level, 0);
-      layoutBoard();
-    });
-
-    on('btn-quit', function () {
-      /* Aufgeben kostet bewusst kein Leben — verloren ist nur, wem die Zeit
-         ausgeht. Der Levelfortschritt ist ohnehin weg. */
-      game.stop();
-      UI.overlay('screen-pause', false);
-      UI.refreshBest();
-      UI.refreshWallet();
-      UI.show('screen-start');
-    });
-
-    on('btn-next', function () {
-      if (lastLevelData) nextLevel(lastLevelData);
-    });
-
-    on('btn-again', function () {
-      UI.overlay('screen-over', false);
-      startRun(1);
-    });
-
-    on('btn-over-menu', function () {
-      UI.overlay('screen-over', false);
-      UI.refreshBest();
-      UI.refreshWallet();
-      UI.show('screen-start');
-    });
-
-    on('btn-mute', function () {
-      var muted = Audio.toggleMute();
-      doc.body.classList.toggle('is-muted', muted);
-    });
+    on('btn-scores-back', function () { openMap(); });
 
     doc.getElementById('score-form').addEventListener('submit', function (e) {
       e.preventDefault();
       submitScore();
     });
+
+    /* --- Ton --- */
+    on('btn-mute', function () {
+      var muted = Audio.toggleMute();
+      doc.body.classList.toggle('is-muted', muted);
+    });
   }
 
   function submitScore() {
-    if (!lastGameOver) return;
-
     UI.setSubmitState('Wird gesendet…');
 
-    Leaderboard.submit(UI.nameValue(), lastGameOver.score, lastGameOver.level)
+    Leaderboard.submit(UI.nameValue(), lifetimeScore, progressState.unlocked)
       .then(function (result) {
         UI.lockSubmit();
         UI.highlight(result.entry);
-        UI.refreshBest();
 
         if (result.online) {
           UI.setSubmitState(
@@ -454,14 +512,13 @@
             'ok'
           );
         } else if (result.queued) {
-          UI.setSubmitState(
-            'Server nicht erreichbar — lokal gespeichert (Platz ' + result.localRank +
-            ') und wird später nachgereicht.',
-            'warn'
-          );
+          UI.setSubmitState('Server nicht erreichbar — lokal gespeichert (Platz ' +
+            result.localRank + ') und wird später nachgereicht.', 'warn');
         } else {
           UI.setSubmitState('Lokal gespeichert — Platz ' + result.localRank, 'ok');
         }
+
+        UI.loadScores();
       });
   }
 
@@ -493,12 +550,12 @@
 
     backdrop = new Backdrop(doc.getElementById('bg-canvas'));
     game = new Game(doc.getElementById('board-canvas'), hooks);
-
-    /* Einstiegspunkt fuer die Konsole und den Smoke-Test in test/. */
     root.M3.__game = game;
 
+    Map.init({ onSelect: openLevelStart });
+
     /* Ein Board vorbereiten, damit das Canvas nie leer dasteht. */
-    game.startLevel(1, 0);
+    game.startLevel(progressState.unlocked);
     game.stop();
 
     setViewportUnit();
@@ -509,21 +566,26 @@
     bindButtons();
 
     doc.body.classList.toggle('is-muted', Audio.isMuted());
-    UI.setContinue(unlocked);
 
     root.addEventListener('resize', onResize);
     root.addEventListener('orientationchange', function () {
       root.setTimeout(onResize, 120);
     });
 
-    /* Beim Wegklicken automatisch pausieren, damit die Uhr nicht weiterlaeuft. */
     doc.addEventListener('visibilitychange', function () {
       if (doc.hidden && game.running && !game.paused && UI.current() === 'screen-game') {
         togglePause();
       }
+      /* Beim Zurueckkommen koennen Herzen nachgewachsen sein. */
+      if (!doc.hidden) UI.refreshWallet();
     });
 
-    /* Wartende Scores aus frueheren Offline-Runden nachreichen. */
+    /* Der Herz-Countdown laeuft sekundenweise mit, solange die Karte offen
+       ist — haeufiger waere Verschwendung, seltener wirkt es kaputt. */
+    root.setInterval(function () {
+      if (UI.current() === 'screen-map' || UI.current() === 'screen-shop') UI.refreshWallet();
+    }, 1000);
+
     Leaderboard.flushPending();
 
     root.requestAnimationFrame(frame);

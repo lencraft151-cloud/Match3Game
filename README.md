@@ -1,12 +1,15 @@
 # Gem Cascade
 
-Ein Match-3-Spiel im Browser: Startbildschirm, Zeitlimit, Levelaufstieg,
-Spezialsteine, lokale und optional weltweite Bestenliste.
+Ein Match-3-Spiel im Browser mit Level-Landkarte, Aufgaben statt Punktejagd,
+Sternewertung, Leben, Kristallen und Power-Ups — plus optionaler weltweiter
+Bestenliste.
 
 Kein Build, keine Abhängigkeiten, keine Assets — reines HTML, CSS und
 JavaScript. `index.html` im Browser öffnen genügt.
 
-## Spielen
+**Spielen:** https://lencraft151-cloud.github.io/Match3Game/
+
+## Lokal starten
 
 ```bash
 git clone https://github.com/lencraft151-cloud/Match3Game.git
@@ -21,15 +24,45 @@ python3 -m http.server 8000     # http://localhost:8000
 node server/server.js           # http://localhost:8080, inklusive Bestenliste
 ```
 
-## Spielregeln
+## So läuft das Spiel
 
-Tausche zwei benachbarte Steine, sodass drei oder mehr gleiche in einer Reihe
-liegen. Passt der Zug nicht, federt er zurück. Erreiche die Zielpunktzahl,
-bevor die Zeit abläuft — jeder Treffer schenkt dir etwas Zeit zurück.
+Auf der **Landkarte** liegen die Level als Bahn aus nummerierten Knoten. Das
+aktuelle trägt eine Krone, geschaffte zeigen ihre Sterne, der Rest ist
+gesperrt. Ein Tipp auf den Knoten öffnet die Levelkarte mit Aufgabe und
+Zugzahl.
 
-Nachrutschende Steine, die erneut treffen, lösen **Kaskaden** aus: der
+Im Level tauschst du zwei benachbarte Steine, sodass drei oder mehr gleiche in
+einer Reihe liegen. **Jeder Zug zählt** — aber nur, wenn er trifft: ein
+Fehlversuch federt zurück und kostet nichts.
+
+Nachrutschende Steine, die erneut treffen, lösen **Kaskaden** aus; der
 Multiplikator steigt mit jeder Stufe der Kette. Die dicken Punkte stecken
 nicht in einzelnen Dreiern, sondern in langen Ketten.
+
+Sind die Aufgaben erfüllt, folgt das **Zug-Finale**: jeder übrige Zug wird
+automatisch in einen Blitz verwandelt. Sparsam spielen zahlt sich also
+doppelt aus — in Punkten und in Sternen.
+
+### Aufgaben
+
+| Typ | Beispiel |
+|---|---|
+| Sammeln | „12 Rubine sammeln" |
+| Felsen | „8 Felsen zerschlagen" |
+| Punkte | „10.000 Punkte" |
+
+Ein Level stellt eine oder zwei davon. Oben im HUD stehen sie als Marke mit
+Restzahl und werden abgehakt, sobald sie erfüllt sind.
+
+### Sterne
+
+Wie viele Züge beim Erfüllen der Aufgaben übrig waren:
+
+| Übrig | Sterne |
+|---|---|
+| ab 40 % | ★★★ |
+| ab 15 % | ★★ |
+| darunter | ★ |
 
 ### Spezialsteine
 
@@ -39,45 +72,12 @@ nicht in einzelnen Dreiern, sondern in langen Ketten.
 | L- oder T-Form | **Bombe** | Sprengt alles im Umkreis von einem Feld |
 | 5 in einer Reihe | **Prisma** | Beim Tausch verschwinden alle Steine der getauschten Farbe |
 
-Spezialsteine, die von einer Explosion getroffen werden, zünden ihrerseits —
-Kettenreaktionen sind ausdrücklich erwünscht. Zwei getauschte Prismen räumen
-das komplette Feld.
+Spezialsteine, die von einer Explosion getroffen werden, zünden ihrerseits.
+Zwei getauschte Prismen räumen das komplette Feld.
 
-Ab Level 4 liegen **Felsen** im Weg: nicht tauschbar, aber sie zerbrechen,
-wenn direkt daneben ein Treffer landet.
-
-Gibt es keinen gültigen Zug mehr, mischt sich das Feld sichtbar neu.
-
-### Leben, Kristalle und Power-Ups
-
-Du hast **fünf Versuche pro Tag**. Jeder Lauf, in dem dir die Zeit ausgeht,
-kostet einen davon; um Mitternacht sind sie wieder da. Aufgeben im Pausenmenü
-kostet bewusst nichts — verloren ist nur, wem die Uhr davonläuft.
-
-Für jedes geschaffte Level gibt es **Kristalle 💎**: ein Grundbetrag, ein
-Zuschlag pro Levelstufe und einer für jede zweite übrige Sekunde. Schnell
-gespielt lohnt sich also doppelt.
-
-Im **Shop** wird daraus Nachschub:
-
-| Posten | Preis | Wirkung |
-|---|---|---|
-| ❤️ Extra-Leben | 60 💎 | Ein zusätzlicher Versuch, maximal 10 gleichzeitig |
-| 🔨 Hammer | 40 💎 | Zerschlägt einen beliebigen Stein — auch einen Fels |
-| 🔀 Mischen | 30 💎 | Würfelt das Feld neu durch |
-| ⏱️ Zeit | 50 💎 | Legt 15 Sekunden auf die Uhr |
-
-Die drei Power-Ups liegen als Leiste unter dem Brett und werden dort direkt
-eingesetzt. Der Hammer braucht ein Ziel: erst antippen, dann den Stein wählen
-— ein zweiter Tipp auf den Knopf entschärft ihn wieder. Zum Ausprobieren
-startet jeder mit je einem Stück.
-
-Sind alle Versuche weg, führt „Spielen" in den Shop statt ins Spiel, und der
-Game-Over-Bildschirm bietet den Kauf direkt an.
-
-Das alles liegt im `localStorage` des Browsers. Wer will, kann es dort
-manipulieren — ohne Benutzerkonten und serverseitige Spielstände lässt sich
-das nicht verhindern, und dafür ist ein Match-3-Spiel der falsche Ort.
+**Felsen** liegen ab Level 4 im Weg: nicht tauschbar, aber sie zerbrechen,
+wenn direkt daneben ein Treffer landet. Gibt es keinen gültigen Zug mehr,
+mischt sich das Feld sichtbar neu.
 
 ### Steuerung
 
@@ -89,35 +89,51 @@ das nicht verhindern, und dafür ist ein Match-3-Spiel der falsche Ort.
 | Leertaste / Enter | Auswählen, dann mit einer Pfeiltaste tauschen |
 | `P` oder `Esc` | Pause |
 
-### Level
+## Leben, Kristalle, Power-Ups
 
-Die ersten acht Stufen sind von Hand gesetzt und führen nacheinander die
-sechste Farbe, die Felsen und die siebte Farbe ein. Danach geht es
-formelbasiert weiter: Ziel plus zehn Prozent pro Stufe, Zeit minus eine
-Sekunde bis zu einem Minimum von 50.
+Du hast **fünf Leben**. Ein verlorenes Level kostet eines. Alle **30 Minuten**
+wächst eines nach (bis fünf), und um **Mitternacht** sind ohnehin alle wieder
+da — der Countdown bis zum nächsten Herz steht oben auf der Karte.
 
-Irgendwann holt einen die Kurve ein — das ist Absicht. Das Spiel ist eine
-Highscore-Jagd, kein Endgegner, und jeder Lauf soll ein Ende finden.
+Gehen dir mitten im Level die Züge aus, kannst du **weiterspielen statt
+aufzugeben**: fünf Extra-Züge gegen Kristalle. Der Preis steigt mit jedem
+Nachkauf im selben Level. Erst wenn du wirklich aufgibst, kostet es ein Leben.
 
-Weil Treffer mit mehr Farben deutlich seltener werden (gemessen: rund 590
-Punkte pro Zug bei fünf Farben, aber nur 287 bei sieben), ist ein Stein bei
-mehr Farben entsprechend mehr wert. Das hält die Ausbeute über alle Stufen
-bei etwa 450 Punkten pro Zug.
+**Kristalle 💎** gibt es für jedes geschaffte Level: Grundbetrag, Zuschlag pro
+Levelstufe und Zuschlag pro Stern.
+
+Im **Shop** wird daraus Nachschub:
+
+| Posten | Preis | Wirkung |
+|---|---|---|
+| ❤️ Extra-Leben | 60 💎 | Ein zusätzliches Leben, maximal 10 gleichzeitig |
+| 🔨 Hammer | 40 💎 | Zerschlägt einen beliebigen Stein — auch einen Fels |
+| 🔀 Mischen | 30 💎 | Würfelt das Feld neu durch |
+| ➕ Extra-Züge | 50 💎 | Legt 5 Züge drauf |
+
+Die drei Power-Ups liegen als Leiste unter dem Brett und **kosten selbst
+keinen Zug**. Der Hammer braucht ein Ziel: erst antippen, dann den Stein
+wählen — ein zweiter Tipp auf den Knopf entschärft ihn wieder.
+
+Alles davon liegt im `localStorage` des Browsers. Wer will, kann es dort
+manipulieren — ohne Benutzerkonten und serverseitige Spielstände lässt sich
+das nicht verhindern.
 
 ## Bestenliste
 
-Ohne weitere Einrichtung speichert das Spiel die Bestenliste lokal im Browser
-und zeigt ein Offline-Badge.
+Gewertet werden die **über alle Level gesammelten Punkte**; das höchste Level
+steht als Zusatz daneben. Eingetragen wird über den Pokal-Knopf auf der Karte.
 
-Für eine **weltweite** Liste liegt in [`server/`](server/) ein Node-Server
-ohne Abhängigkeiten bereit. Nach dem Deployment trägst du dessen URL in
+Ohne weitere Einrichtung bleibt die Liste lokal im Browser. Für eine
+**weltweite** Liste liegt in [`server/`](server/) ein Node-Server ohne
+Abhängigkeiten bereit. Nach dem Deployment trägst du dessen URL in
 [`js/config.js`](js/config.js) ein:
 
 ```js
 LEADERBOARD_API: 'https://deine-app.onrender.com',
 ```
 
-Details, Deploy-Anleitung und die Grenzen der Fälschungssicherheit stehen in
+Details und die Grenzen der Fälschungssicherheit stehen in
 [`server/README.md`](server/README.md). Kurzfassung: ein rein clientseitiges
 Spiel kann Punktzahlen nicht garantieren — für eine Liste unter Freunden
 reicht es, als Turnierwertung nicht.
@@ -126,25 +142,30 @@ Erreicht der Server nicht rechtzeitig eine Antwort, fällt das Spiel
 automatisch auf die lokale Liste zurück; nicht zugestellte Einträge werden
 zwischengespeichert und beim nächsten Start nachgereicht.
 
-## Auf GitHub Pages veröffentlichen
+## Level-Balance
 
-Der Workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
-veröffentlicht das Spiel bei jedem Push. Einmalig nötig:
+Die Zugzahlen sind **gemessen, nicht geschätzt**:
 
-**Settings → Pages → Source** auf **GitHub Actions** stellen.
+```bash
+node test/balance.js            # Level 1–30, je 40 Versuche
+node test/balance.js 1 60 100   # Level 1–60, je 100 Versuche
+```
 
-Der Workflow lässt vor dem Deployment die Board-Tests laufen und kopiert nur
-`index.html`, `css/` und `js/` — Server und Tests bleiben draußen.
+Ein Bot spielt stur den erstbesten gültigen Zug und plant nichts. Zielkorridor
+ist eine Erfolgsquote von **60 bis 85 Prozent** — ein Mensch liegt darüber.
+Level 1–60 liegen aktuell alle in diesem Bereich.
 
-GitHub Pages ist rein statisch und kann kein Node ausführen. Das Spiel läuft
-dort vollständig, für die Online-Bestenliste braucht der Server einen eigenen
-Platz (siehe oben).
+Gemessene Ausbeute pro 25 Bot-Züge: rund 23 Steine je Farbe bei fünf Farben,
+17 bei sechs, 13 bei sieben. Weil Treffer mit mehr Farben deutlich seltener
+werden, ist ein Stein dann entsprechend mehr wert — sonst wären Punkteziele in
+späten Leveln unerreichbar.
 
 ## Tests
 
 ```bash
-node test/board.test.js     # 38 Prüfungen
-node test/player.test.js    # 42 Prüfungen
+node test/board.test.js     # 38 Prüfungen — Spielfeldlogik
+node test/player.test.js    # 57 Prüfungen — Leben, Kristalle, Käufe
+node test/levels.test.js    # 31 Prüfungen — Level und Aufgaben
 ```
 
 Ohne Framework und ohne Browser.
@@ -153,39 +174,60 @@ Ohne Framework und ohne Browser.
 Cluster-Erkennung, Spezialsteine, Kettenreaktionen, Felsen, Schwerkraft,
 Sackgassen und einen Dauerlauf über 600 Züge.
 
-`player.test.js` prüft Leben, den Tageswechsel um Mitternacht, die
-Kristallberechnung, Käufe samt Obergrenzen und was bei manipulierten oder
-kaputten Spielständen passiert.
+`player.test.js` prüft Leben, den Nachfüll-Timer, den Tageswechsel, die
+Kristallberechnung, Käufe samt Obergrenzen und manipulierte Spielstände.
+
+`levels.test.js` prüft vor allem, dass **kein Level unlösbar** ist: keine
+Sammelaufgabe auf eine Farbe, die es im Level nicht gibt, und keine
+Felsaufgabe über der Zahl der gesetzten Felsen.
 
 ## Aufbau
 
 ```
 index.html          Alle Screens
-css/style.css       Styling, Screen-Übergänge, Responsive
-js/config.js        Einstellungen — hier stehen Leaderboard-URL und Preise
+css/style.css       Königsblau/Gold-Theme, Karte, Popups, Responsive
+js/config.js        Einstellungen — Leaderboard-URL, Preise, Zeiten
 js/utils.js         Mathe, Easing, Zufall, Speicher
-js/player.js        Leben, Kristalle, Power-Up-Vorrat, Tageswechsel
+js/goals.js         Aufgabentypen, Beschriftung, Fortschritt
+js/player.js        Leben, Kristalle, Power-Up-Vorrat, Nachfüll-Timer
 js/audio.js         Effekte, zur Laufzeit synthetisiert (keine Audiodateien)
 js/particles.js     Partikel, Schockwellen, Lichtstrahlen, Fliegetexte
-js/levels.js        Level-Definitionen
+js/levels.js        Leveldefinitionen und Sternewertung
 js/board.js         Spielfeldlogik — ohne DOM, in Node testbar
-js/game.js          Zustandsautomat, Animationen, Canvas-Rendering
+js/game.js          Zustandsautomat, Züge, Animationen, Canvas-Rendering
+js/map.js           Level-Landkarte
 js/leaderboard.js   Online-Client mit lokalem Fallback
-js/ui.js            Screens und HUD
-js/main.js          Bootstrap, Eingabe, Bildschleife
+js/ui.js            Screens, HUD, Popups
+js/main.js          Bootstrap, Eingabe, Ablaufsteuerung
 server/server.js    Bestenlisten-Server
-test/board.test.js  Tests der Spielfeldlogik
-test/player.test.js Tests für Leben, Kristalle und Käufe
+test/               Tests und das Balance-Werkzeug
 ```
 
-`board.js` kennt weder Canvas noch DOM und lässt sich deshalb direkt in Node
-testen. `game.js` hängt den Steinen nur Darstellungsfelder an.
+`board.js` und `goals.js` kennen weder Canvas noch DOM und lassen sich deshalb
+direkt in Node testen. `game.js` hängt den Steinen nur Darstellungsfelder an.
+
+## Auf GitHub Pages veröffentlichen
+
+Der Workflow [`.github/workflows/pages.yml`](.github/workflows/pages.yml)
+veröffentlicht bei jedem Push und lässt vorher die Tests laufen.
+
+> **Wichtig:** Die `github-pages`-Umgebung akzeptiert Deployments nur vom
+> Branch `main`. Entwickelt wird auf dem Feature-Branch, veröffentlicht wird
+> mit:
+>
+> ```bash
+> git push origin claude/match3-game-animations-xy2ooe:main
+> ```
+
+GitHub Pages ist rein statisch und kann kein Node ausführen. Das Spiel läuft
+dort vollständig; für die Online-Bestenliste braucht der Server einen eigenen
+Platz (siehe oben).
 
 ## Barrierefreiheit
 
 - Jede Farbe hat zusätzlich eine **eigene Form** — das Spiel bleibt bei
   Farbfehlsichtigkeit lesbar.
-- Vollständig mit der Tastatur spielbar.
+- Vollständig mit der Tastatur spielbar, Kartenknoten inklusive.
 - `prefers-reduced-motion` wird respektiert: Partikel, Screen-Shake und
   Hintergrundbewegung fahren deutlich zurück, das Spiel bleibt voll spielbar.
 - Ton lässt sich abschalten, die Einstellung bleibt gespeichert.
@@ -194,5 +236,5 @@ testen. `game.js` hängt den Steinen nur Darstellungsfelder an.
 
 Getestet mit Chromium in Desktop- und Handy-Auflösung. Benötigt Canvas 2D und
 `requestAnimationFrame`; Web Audio und `localStorage` sind optional — fehlen
-sie, läuft das Spiel ohne Ton beziehungsweise ohne gespeicherte Bestenliste
+sie, läuft das Spiel ohne Ton beziehungsweise ohne gespeicherten Fortschritt
 weiter, statt abzustürzen.

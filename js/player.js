@@ -34,17 +34,17 @@
       price: CONFIG.PRICE_SHUFFLE,
       hint: 'Würfelt das ganze Feld neu durch.'
     },
-    time: {
-      key: 'time',
-      name: 'Zeit',
-      icon: '⏱️',
-      price: CONFIG.PRICE_TIME,
-      hint: '+' + CONFIG.POWERUP_TIME_BONUS + ' Sekunden auf die Uhr.'
+    moves: {
+      key: 'moves',
+      name: 'Extra-Züge',
+      icon: '➕',
+      price: CONFIG.PRICE_MOVES,
+      hint: '+' + CONFIG.POWERUP_EXTRA_MOVES + ' Züge mitten im Level.'
     }
   };
 
   Player.ITEMS = ITEMS;
-  Player.ITEM_KEYS = ['hammer', 'shuffle', 'time'];
+  Player.ITEM_KEYS = ['hammer', 'shuffle', 'moves'];
 
   /* --------------------------------------------------------------- Zustand */
 
@@ -62,10 +62,13 @@
       crystals: 0,
       lives: CONFIG.MAX_LIVES,
       day: todayKey(),
+      /* Zeitpunkt, an dem das naechste Herz faellig ist. Nur gesetzt, wenn
+         ueberhaupt Herzen fehlen. */
+      nextRegenAt: 0,
       powerups: {
         hammer: CONFIG.STARTING_POWERUPS.hammer,
         shuffle: CONFIG.STARTING_POWERUPS.shuffle,
-        time: CONFIG.STARTING_POWERUPS.time
+        moves: CONFIG.STARTING_POWERUPS.moves
       }
     };
   }
@@ -80,6 +83,7 @@
       crystals: clampInt(raw.crystals, 0, 9999999, 0),
       lives: clampInt(raw.lives, 0, CONFIG.LIVES_CAP, CONFIG.MAX_LIVES),
       day: typeof raw.day === 'string' ? raw.day : base.day,
+      nextRegenAt: clampInt(raw.nextRegenAt, 0, 8640000000000000, 0),
       powerups: {}
     };
 
@@ -109,31 +113,77 @@
 
     state.day = key;
     state.lives = Math.max(state.lives, CONFIG.MAX_LIVES);
-    save();
+    state.nextRegenAt = 0;
     return true;
+  }
+
+  /* Fuellt auf, was seit dem letzten Blick faellig geworden ist. Gerechnet
+     wird ueber die tatsaechlich vergangene Zeit, nicht ueber Timer-Ticks —
+     so stimmt es auch, wenn das Tab stundenlang geschlossen war.
+
+     Gekaufte Extraleben ueber MAX_LIVES bleiben unangetastet; nachgefuellt
+     wird nur bis zum normalen Maximum. */
+  function refreshRegen(now) {
+    if (state.lives >= CONFIG.MAX_LIVES) {
+      state.nextRegenAt = 0;
+      return false;
+    }
+
+    /* Erstes fehlendes Herz startet die Uhr. */
+    if (!state.nextRegenAt) {
+      state.nextRegenAt = now + CONFIG.LIFE_REGEN_MS;
+      return true;
+    }
+
+    if (now < state.nextRegenAt) return false;
+
+    var elapsed = now - state.nextRegenAt;
+    var earned = 1 + Math.floor(elapsed / CONFIG.LIFE_REGEN_MS);
+    var missing = CONFIG.MAX_LIVES - state.lives;
+    var gained = Math.min(earned, missing);
+
+    state.lives += gained;
+
+    if (state.lives >= CONFIG.MAX_LIVES) {
+      state.nextRegenAt = 0;
+    } else {
+      /* Angebrochenes Fenster nicht verschenken. */
+      state.nextRegenAt = now + (CONFIG.LIFE_REGEN_MS - (elapsed % CONFIG.LIFE_REGEN_MS));
+    }
+    return true;
+  }
+
+  /* Beides zusammen, mit genau einem Speichervorgang. */
+  function refresh() {
+    var changed = refreshDay();
+    if (refreshRegen(Date.now())) changed = true;
+    if (changed) save();
+    return changed;
   }
 
   Player.load = function () {
     state = sanitize(Utils.storeGet(CONFIG.STORE_PLAYER, null));
-    refreshDay();
+    refresh();
     save();
     return Player.snapshot();
   };
 
-  /* Vor jedem Lesezugriff pruefen, ob inzwischen ein neuer Tag angebrochen
-     ist — sonst haengt ein ueber Mitternacht offenes Tab auf null Leben. */
+  /* Vor jedem Lesezugriff nachrechnen — sonst haengt ein lange offenes Tab
+     auf null Leben, obwohl laengst welche nachgewachsen sind. */
   Player.snapshot = function () {
     if (!state) Player.load();
-    refreshDay();
+    refresh();
 
     return {
       crystals: state.crystals,
       lives: state.lives,
       maxLives: CONFIG.MAX_LIVES,
+      nextRegenAt: state.nextRegenAt,
+      msToNextLife: state.nextRegenAt ? Math.max(0, state.nextRegenAt - Date.now()) : 0,
       powerups: {
         hammer: state.powerups.hammer,
         shuffle: state.powerups.shuffle,
-        time: state.powerups.time
+        moves: state.powerups.moves
       }
     };
   };
@@ -144,21 +194,28 @@
     return Player.snapshot().lives > 0;
   };
 
-  /* Ein verlorener Lauf kostet ein Leben. Liefert die verbleibende Zahl. */
+  /* Ein verlorenes Level kostet ein Leben. Liefert die verbleibende Zahl. */
   Player.loseLife = function () {
     Player.snapshot();
     state.lives = Math.max(0, state.lives - 1);
+
+    /* Faellt man unter das Maximum, laeuft ab jetzt die Nachfuell-Uhr. */
+    if (state.lives < CONFIG.MAX_LIVES && !state.nextRegenAt) {
+      state.nextRegenAt = Date.now() + CONFIG.LIFE_REGEN_MS;
+    }
+
     save();
     return state.lives;
   };
 
   /* ------------------------------------------------------------- Kristalle */
 
-  /* Belohnung fuer ein geschafftes Level. */
-  Player.crystalsForLevel = function (level, secondsLeft) {
+  /* Belohnung fuer ein geschafftes Level: Grundwert plus Levelstufe plus
+     Sterne. */
+  Player.crystalsForLevel = function (level, stars) {
     return CONFIG.CRYSTALS_BASE +
       CONFIG.CRYSTALS_PER_LEVEL * Math.max(1, level) +
-      Math.floor(Math.max(0, secondsLeft) / 2) * CONFIG.CRYSTALS_PER_2_SECONDS;
+      CONFIG.CRYSTALS_PER_STAR * Utils.clamp(Math.floor(stars) || 0, 0, 3);
   };
 
   Player.earn = function (amount) {
@@ -171,6 +228,18 @@
 
   Player.canAfford = function (price) {
     return Player.snapshot().crystals >= price;
+  };
+
+  /* Bucht Kristalle ab, ohne dafuer einen Gegenstand zu liefern — etwa fuer
+     die Extra-Zuege im Verloren-Popup. Gibt false zurueck, wenn das Guthaben
+     nicht reicht; abgebucht wird dann nichts. */
+  Player.spend = function (price) {
+    Player.snapshot();
+    if (state.crystals < price) return false;
+
+    state.crystals -= price;
+    save();
+    return true;
   };
 
   /* ------------------------------------------------------------- Einkaeufe */

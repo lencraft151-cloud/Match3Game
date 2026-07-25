@@ -20,6 +20,7 @@
   var CONFIG = root.M3.CONFIG;
   var Audio = root.M3.Audio;
   var Levels = root.M3.Levels;
+  var Goals = root.M3.Goals;
   var Board = root.M3.Board;
   var SPECIAL = root.M3.SPECIAL;
   var Fx = root.M3.Fx;
@@ -79,8 +80,10 @@
 
     this.totalScore = 0;
     this.levelScore = 0;
-    this.timeLeft = 0;
+    this.movesLeft = 0;
+    this.progress = Goals.newProgress(7);
     this.cascade = 0;
+    this.finale = null;    /* laufendes Zug-Finale nach dem Sieg */
 
     this.phase = PHASE.DONE;
     this.phaseT = 0;
@@ -107,8 +110,6 @@
     this.cssSize = 400;
     this.pad = 8;
     this.cell = 48;
-
-    this.lastTickSecond = -1;
   }
 
   Game.COLORS = COLORS;
@@ -151,12 +152,7 @@
   /*  Levelsteuerung                                                        */
   /* ====================================================================== */
 
-  Game.prototype.startRun = function (startLevel) {
-    this.totalScore = 0;
-    this.startLevel(startLevel || 1, 0);
-  };
-
-  Game.prototype.startLevel = function (level, carrySeconds) {
+  Game.prototype.startLevel = function (level) {
     this.level = level;
     this.def = Levels.get(level);
 
@@ -169,8 +165,10 @@
     this.board.generate(this.def.blockers);
 
     this.levelScore = 0;
-    this.timeLeft = this.def.time + (carrySeconds || 0);
+    this.movesLeft = this.def.moves;
+    this.progress = Goals.newProgress(this.def.colors);
     this.cascade = 0;
+    this.finale = null;
 
     this.selected = null;
     this.cursor = null;
@@ -185,7 +183,6 @@
     this.pendingSwapSeeds = null;
     this.shake = 0;
     this.flash = 0;
-    this.lastTickSecond = -1;
 
     this.fx.clear();
     this.syncViews(true);
@@ -439,9 +436,10 @@
     return true;
   };
 
-  Game.prototype.usePowerTime = function () {
-    if (!this.addTime(CONFIG.POWERUP_TIME_BONUS)) return false;
-    this.spent('time');
+  Game.prototype.usePowerMoves = function () {
+    if (!this.running) return false;
+    this.addMoves(CONFIG.POWERUP_EXTRA_MOVES);
+    this.spent('moves');
     return true;
   };
 
@@ -451,13 +449,11 @@
     if (this.hooks.onPowerUsed) this.hooks.onPowerUsed(key);
   };
 
-  Game.prototype.addTime = function (seconds) {
-    if (!this.running) return false;
-
-    this.timeLeft += seconds;
+  Game.prototype.addMoves = function (extra) {
+    this.movesLeft += extra;
 
     var mid = this.cellCenter(this.cols / 2 - 0.5, this.rows / 2 - 0.5);
-    this.fx.text(mid.x, mid.y, '+' + seconds + 's', '#7ee787', Math.round(this.cell * 0.6));
+    this.fx.text(mid.x, mid.y, '+' + extra + ' Züge', '#7ee787', Math.round(this.cell * 0.55));
     this.fx.ring(mid.x, mid.y, this.cell * 3.2, '#7ee787', 4);
     Audio.specialBorn();
 
@@ -497,6 +493,13 @@
 
     this.cascade = 0;
     this.pendingSwapSeeds = valid ? { a: a, b: b, rainbow: rainbowSeeds, targets: rainbowTargets } : null;
+
+    /* Nur ein Zug, der wirklich etwas bewirkt, kostet auch einen. Ein
+       Fehlversuch ist frei — sonst bestraft das Spiel Ausprobieren. */
+    if (valid) {
+      this.movesLeft = Math.max(0, this.movesLeft - 1);
+      this.emitStats();
+    }
 
     /* Bei gueltigem Tausch sind die Steine bereits vertauscht, bei
        ungueltigem stehen sie wieder auf ihren alten Plaetzen. In beiden
@@ -590,12 +593,10 @@
 
     this.addScore(gained);
 
-    /* --- Zeitgutschrift ----------------------------------------------- */
-    var timeGain = Math.min(
-      CONFIG.TIME_MAX_BONUS_PER_MOVE,
-      CONFIG.TIME_PER_MATCH + CONFIG.TIME_PER_CASCADE * (cascadeMult - 1)
-    );
-    this.timeLeft += timeGain;
+    /* --- Aufgabenfortschritt ------------------------------------------ */
+    /* Muss vor dem Raeumen passieren — danach sind die Steine weg und ihre
+       Farbe nicht mehr feststellbar. */
+    this.countProgress(blast);
 
     /* --- Effekte fuer die Zuendungen ---------------------------------- */
     blast.activations.forEach(function (act) {
@@ -645,6 +646,21 @@
 
     this.births = births;
     this.setPhase(PHASE.CLEAR);
+  };
+
+  /* Zaehlt geraeumte Steine nach Farbe und zerbrochene Felsen mit. Die
+     Punkte stehen schon in levelScore, werden hier nur uebernommen, damit
+     goals.js nur ein Objekt braucht. */
+  Game.prototype.countProgress = function (blast) {
+    for (var i = 0; i < blast.cleared.length; i++) {
+      var gem = this.board.cells[blast.cleared[i]];
+      if (gem && gem.kind === 'gem' && this.progress.colors[gem.type] !== undefined) {
+        this.progress.colors[gem.type]++;
+      }
+    }
+
+    this.progress.blockers += blast.blockers.length;
+    this.progress.score = this.levelScore;
   };
 
   function comboLabel(n) {
@@ -769,13 +785,25 @@
     this.setPhase(PHASE.FALL);
   };
 
-  /* Ende einer Kaskadenkette: Levelziel, Sackgasse, dann wieder Eingabe. */
+  /* Ende einer Kaskadenkette: Aufgaben, Zuege, Sackgasse, dann Eingabe. */
   Game.prototype.finishChain = function () {
     this.cascade = 0;
     this.popping.length = 0;
+    this.emitStats();
 
-    if (this.levelScore >= this.def.target) {
-      this.completeLevel();
+    /* Laeuft gerade das Zug-Finale, geht es dort weiter. */
+    if (this.finale) {
+      this.stepFinale();
+      return;
+    }
+
+    if (Goals.allDone(this.def.goals, this.progress)) {
+      this.startFinale();
+      return;
+    }
+
+    if (this.movesLeft <= 0) {
+      this.levelFailed();
       return;
     }
 
@@ -787,6 +815,64 @@
     this.idleTime = 0;
     this.hint = null;
     this.setPhase(PHASE.IDLE);
+  };
+
+  /* ------------------------------------------------------------ Zug-Finale */
+
+  /* Sind die Aufgaben erfuellt, werden uebrige Zuege nicht verschenkt: jeder
+     wird in einen Blitz auf einen zufaelligen Stein verwandelt. Das ist im
+     Genre der befriedigendste Moment und macht Sparsamkeit sichtbar
+     wertvoll. */
+  Game.prototype.startFinale = function () {
+    this.selected = null;
+    this.hint = null;
+    this.disarm();
+
+    this.finaleMovesAtWin = this.movesLeft;
+
+    if (this.movesLeft <= 0) {
+      this.completeLevel();
+      return;
+    }
+
+    this.finale = { left: this.movesLeft };
+    this.say('Alle Aufgaben erfüllt!');
+    this.stepFinale();
+  };
+
+  Game.prototype.stepFinale = function () {
+    if (!this.finale) return;
+
+    if (this.finale.left <= 0) {
+      this.finale = null;
+      this.completeLevel();
+      return;
+    }
+
+    this.finale.left--;
+    this.movesLeft = this.finale.left;
+    this.emitStats();
+
+    /* Einen zufaelligen normalen Stein in einen Blitz verwandeln und
+       sofort zuenden. */
+    var candidates = [];
+    for (var i = 0; i < this.board.cells.length; i++) {
+      var gem = this.board.cells[i];
+      if (gem && gem.kind === 'gem') candidates.push(i);
+    }
+
+    if (!candidates.length) {
+      this.finale = null;
+      this.completeLevel();
+      return;
+    }
+
+    var pick = candidates[Math.floor(Math.random() * candidates.length)];
+    this.board.cells[pick].special = Math.random() < 0.5 ? SPECIAL.LINE_H : SPECIAL.LINE_V;
+
+    this.cascade = 0;
+    this.pendingSwapSeeds = { a: pick, b: pick, rainbow: [pick], targets: {} };
+    this.resolve();
   };
 
   Game.prototype.startShuffle = function (message) {
@@ -824,9 +910,10 @@
         level: this.level,
         score: this.totalScore,
         levelScore: this.levelScore,
-        target: this.def.target,
-        timeLeft: this.timeLeft,
-        timeTotal: this.def.time
+        movesLeft: this.movesLeft,
+        movesTotal: this.def.moves,
+        goals: this.def.goals,
+        progress: this.progress
       });
     }
   };
@@ -838,13 +925,11 @@
   Game.prototype.completeLevel = function () {
     this.running = false;
     this.setPhase(PHASE.DONE);
-
-    var secondsLeft = Math.max(0, this.timeLeft);
-    var bonus = Math.round(secondsLeft * Levels.TIME_BONUS_PER_SECOND);
-    var carry = Levels.carryOver(secondsLeft);
-
-    this.totalScore += bonus;
     this.emitStats();
+
+    /* Bewertet wird der Stand bei Erfuellung der Aufgaben, nicht nach dem
+       Finale — sonst gaebe es immer nur einen Stern. */
+    var stars = Levels.starsFor(this.finaleMovesAtWin || 0, this.def.moves);
 
     Audio.levelUp();
 
@@ -858,28 +943,44 @@
         level: this.level,
         nextLevel: this.level + 1,
         levelScore: this.levelScore,
-        bonus: bonus,
-        carry: carry,
-        secondsLeft: secondsLeft,
+        movesLeft: this.finaleMovesAtWin || 0,
+        movesTotal: this.def.moves,
+        stars: stars,
         total: this.totalScore
       });
     }
   };
 
-  Game.prototype.gameOver = function () {
+  /* Zuege alle, Aufgaben offen. Das Level ist noch nicht endgueltig verloren —
+     main.js bietet erst Extra-Zuege an, bevor ein Herz faellig wird. */
+  Game.prototype.levelFailed = function () {
     this.running = false;
     this.setPhase(PHASE.DONE);
-    this.timeLeft = 0;
     this.emitStats();
 
     Audio.gameOver();
 
-    if (this.hooks.onGameOver) {
-      this.hooks.onGameOver({
+    if (this.hooks.onLevelFailed) {
+      this.hooks.onLevelFailed({
         level: this.level,
-        score: this.totalScore
+        levelScore: this.levelScore,
+        score: this.totalScore,
+        goals: this.def.goals,
+        progress: this.progress
       });
     }
+  };
+
+  /* Weiterspielen, nachdem das Verloren-Popup Extra-Zuege verkauft hat. */
+  Game.prototype.grantMoves = function (extra) {
+    this.running = true;
+    this.paused = false;
+
+    this.addMoves(extra);
+    this.say('Weiter geht’s!');
+
+    /* Kuemmert sich auch darum, falls inzwischen kein Zug mehr existiert. */
+    this.finishChain();
   };
 
   Game.prototype.addShake = function (amount) {
@@ -893,7 +994,7 @@
 
   Game.prototype.update = function (dt) {
     /* Bei Tab-Wechseln liefert requestAnimationFrame riesige Zeitspruenge —
-       gedeckelt, damit die Uhr nicht wegläuft und Tweens nicht ueberspringen. */
+       gedeckelt, damit Tweens nicht ueberspringen. */
     dt = Math.min(dt, 0.05);
 
     this.fx.update(dt);
@@ -901,32 +1002,11 @@
     this.flash *= Math.pow(0.0015, dt);
 
     if (this.running && !this.paused) {
-      this.tickClock(dt);
       this.phaseT += dt;
       this.updatePhase(dt);
     }
 
     this.updateGemViews(dt);
-  };
-
-  Game.prototype.tickClock = function (dt) {
-    if (this.phase === PHASE.DONE) return;
-
-    this.timeLeft -= dt;
-
-    var whole = Math.ceil(this.timeLeft);
-    if (this.timeLeft <= 10 && whole !== this.lastTickSecond && whole > 0) {
-      this.lastTickSecond = whole;
-      Audio.tick();
-    }
-
-    if (this.timeLeft <= 0) {
-      this.timeLeft = 0;
-      this.gameOver();
-      return;
-    }
-
-    this.emitStats();
   };
 
   Game.prototype.updatePhase = function (dt) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#0b0a1f">
+<meta name="theme-color" content="#12296b">
 <title>Gem Cascade — Match 3</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128142;</text></svg>">
 <link rel="stylesheet" href="css/style.css">
@@ -13,64 +13,62 @@
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
 <div id="vignette" aria-hidden="true"></div>
 
-<!-- ============================ START ============================ -->
-<section class="screen is-active" id="screen-start">
+<!-- ============================ TITEL ============================ -->
+<section class="screen is-active" id="screen-title">
   <div class="panel panel--hero">
     <h1 class="title">
       <span class="title__word">Gem</span>
       <span class="title__word title__word--accent">Cascade</span>
     </h1>
-    <p class="tagline">Kombiniere drei. Jage die Kaskade. Schlag die Uhr.</p>
-    <div class="wallet" id="start-wallet">
-      <div class="wallet__item" id="lives-display" title="Leben">
-        <span class="hearts" id="hearts"></span>
-        <span class="wallet__label" id="lives-note">5 Versuche heute</span>
-      </div>
-      <div class="wallet__item">
-        <span class="crystal">💎</span>
-        <strong class="wallet__value" id="crystals">0</strong>
-      </div>
-    </div>
-
+    <p class="tagline">Kombiniere drei. Jage die Kaskade. Knack jedes Level.</p>
     <div class="menu">
-      <button class="btn btn--primary btn--big" id="btn-play">Spielen</button>
-      <button class="btn" id="btn-continue" hidden>Level <span id="continue-level">1</span> fortsetzen</button>
-      <button class="btn" id="btn-shop">Shop</button>
-      <button class="btn" id="btn-scores">Bestenliste</button>
+      <button class="btn btn--primary btn--big" id="btn-start">Spielen</button>
       <button class="btn" id="btn-help">Anleitung</button>
     </div>
-    <p class="best-line">Persönlicher Rekord: <strong id="start-best">0</strong></p>
   </div>
   <button class="icon-btn icon-btn--float" id="btn-mute" title="Ton an/aus" aria-label="Ton an/aus">
     <span class="icon-btn__on">&#128266;</span><span class="icon-btn__off">&#128263;</span>
   </button>
 </section>
 
-<!-- ============================ GAME ============================= -->
+<!-- ============================= KARTE =========================== -->
+<section class="screen screen--plain" id="screen-map">
+  <header class="topbar">
+    <div class="topbar__stat" id="lives-display">
+      <span class="hearts" id="hearts"></span>
+      <span class="topbar__sub" id="lives-note">Voll</span>
+    </div>
+    <div class="topbar__stat topbar__stat--coins">
+      <span class="coin">&#128142;</span>
+      <strong id="crystals">0</strong>
+    </div>
+    <div class="topbar__actions">
+      <button class="icon-btn" id="btn-shop" title="Shop" aria-label="Shop">&#128722;</button>
+      <button class="icon-btn" id="btn-scores" title="Bestenliste" aria-label="Bestenliste">&#127942;</button>
+      <button class="icon-btn" id="btn-map-help" title="Anleitung" aria-label="Anleitung">?</button>
+    </div>
+  </header>
+
+  <div class="map" id="map-scroll">
+    <div class="map__inner" id="map-inner">
+      <svg class="map__path" id="map-path" aria-hidden="true"></svg>
+      <div class="map__nodes" id="map-nodes"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SPIEL ============================ -->
 <section class="screen" id="screen-game">
   <header class="hud">
     <div class="hud__row">
-      <div class="stat stat--level">
-        <span class="stat__label">Level</span>
-        <span class="stat__value" id="hud-level">1</span>
+      <div class="moves" id="moves-box">
+        <span class="moves__value" id="hud-moves">25</span>
+        <span class="moves__label">Züge</span>
       </div>
-      <div class="stat stat--score">
-        <span class="stat__label">Punkte</span>
-        <span class="stat__value" id="hud-score">0</span>
-      </div>
-      <div class="hud__actions">
-        <button class="icon-btn" id="btn-pause" title="Pause" aria-label="Pause">&#10073;&#10073;</button>
-      </div>
-    </div>
 
-    <div class="meter meter--goal">
-      <div class="meter__fill" id="goal-fill"></div>
-      <div class="meter__text"><span id="goal-text">0 / 1000</span></div>
-    </div>
+      <ul class="goals" id="goal-list"></ul>
 
-    <div class="meter meter--time" id="time-meter">
-      <div class="meter__fill" id="time-fill"></div>
-      <div class="meter__text"><span id="time-text">1:00</span></div>
+      <button class="icon-btn" id="btn-pause" title="Pause" aria-label="Pause">&#10073;&#10073;</button>
     </div>
   </header>
 
@@ -81,19 +79,19 @@
 
   <div class="powerbar" id="powerbar" role="group" aria-label="Power-Ups">
     <button class="power" id="pw-hammer" type="button">
-      <span class="power__icon">🔨</span>
+      <span class="power__icon">&#128296;</span>
       <span class="power__name">Hammer</span>
       <span class="power__count" id="count-hammer">0</span>
     </button>
     <button class="power" id="pw-shuffle" type="button">
-      <span class="power__icon">🔀</span>
+      <span class="power__icon">&#128256;</span>
       <span class="power__name">Mischen</span>
       <span class="power__count" id="count-shuffle">0</span>
     </button>
-    <button class="power" id="pw-time" type="button">
-      <span class="power__icon">⏱️</span>
-      <span class="power__name">+15s</span>
-      <span class="power__count" id="count-time">0</span>
+    <button class="power" id="pw-moves" type="button">
+      <span class="power__icon">&#10133;</span>
+      <span class="power__name">+5 Züge</span>
+      <span class="power__count" id="count-moves">0</span>
     </button>
   </div>
 
@@ -102,74 +100,82 @@
   </footer>
 </section>
 
-<!-- ============================ OVERLAYS ========================= -->
+<!-- ======================== LEVEL-START ========================== -->
+<section class="screen screen--overlay" id="screen-levelstart">
+  <div class="panel panel--card">
+    <div class="ribbon">Level <span id="start-level">1</span></div>
+
+    <p class="card__lead">Schaffe das:</p>
+    <ul class="goal-cards" id="start-goals"></ul>
+
+    <p class="card__moves">Du hast <strong id="start-moves">25</strong> Züge</p>
+
+    <div class="menu">
+      <button class="btn btn--primary btn--big" id="btn-level-play">Spielen</button>
+      <button class="btn btn--quiet" id="btn-level-back">Zurück</button>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== PAUSE ============================= -->
 <section class="screen screen--overlay" id="screen-pause">
-  <div class="panel">
-    <h2 class="panel__title">Pause</h2>
+  <div class="panel panel--card">
+    <div class="ribbon">Pause</div>
     <div class="menu">
       <button class="btn btn--primary" id="btn-resume">Weiter</button>
-      <button class="btn" id="btn-restart">Level neu starten</button>
-      <button class="btn btn--quiet" id="btn-quit">Aufgeben</button>
+      <button class="btn" id="btn-restart">Neu starten</button>
+      <button class="btn btn--quiet" id="btn-quit">Zur Karte</button>
     </div>
   </div>
 </section>
 
-<section class="screen screen--overlay" id="screen-level">
-  <div class="panel panel--celebrate">
+<!-- ========================== GEWONNEN =========================== -->
+<section class="screen screen--overlay" id="screen-win">
+  <div class="panel panel--card panel--celebrate">
     <div class="burst" aria-hidden="true"></div>
-    <h2 class="panel__title">Level geschafft!</h2>
+    <div class="ribbon ribbon--gold">Geschafft!</div>
+
+    <div class="stars" id="win-stars" aria-label="Sterne"></div>
+
     <dl class="tally">
-      <div class="tally__row"><dt>Punkte</dt><dd id="lvl-score">0</dd></div>
-      <div class="tally__row"><dt>Zeitbonus</dt><dd id="lvl-bonus">+0</dd></div>
-      <div class="tally__row"><dt>Zeit mitgenommen</dt><dd id="lvl-carry">+0s</dd></div>
-      <div class="tally__row tally__row--crystals"><dt>Kristalle</dt><dd id="lvl-crystals">+0 💎</dd></div>
-      <div class="tally__row tally__row--total"><dt>Gesamt</dt><dd id="lvl-total">0</dd></div>
+      <div class="tally__row"><dt>Punkte</dt><dd id="win-score">0</dd></div>
+      <div class="tally__row"><dt>Züge übrig</dt><dd id="win-moves">0</dd></div>
+      <div class="tally__row tally__row--crystals"><dt>Kristalle</dt><dd id="win-crystals">+0</dd></div>
     </dl>
-    <button class="btn btn--primary btn--big" id="btn-next">Level <span id="lvl-next-num">2</span></button>
+
+    <button class="btn btn--primary btn--big" id="btn-win-next">Weiter</button>
   </div>
 </section>
 
-<section class="screen screen--overlay" id="screen-over">
-  <div class="panel">
-    <h2 class="panel__title panel__title--sad">Zeit abgelaufen</h2>
-    <p class="final-score"><span id="over-score">0</span></p>
-    <p class="final-sub">Level <span id="over-level">1</span> &middot; <span id="over-note">Neuer Rekord!</span></p>
+<!-- ========================== VERLOREN =========================== -->
+<section class="screen screen--overlay" id="screen-fail">
+  <div class="panel panel--card">
+    <div class="ribbon ribbon--red">Keine Züge mehr</div>
 
-    <div class="lives-strip">
-      <span class="hearts" id="over-hearts"></span>
-      <span class="lives-strip__text" id="over-lives-text">Noch 4 Versuche heute</span>
-    </div>
+    <ul class="goal-cards" id="fail-goals"></ul>
 
-    <div class="revive" id="revive-box" hidden>
-      <p class="revive__text">Für heute sind deine Versuche aufgebraucht.</p>
-      <button class="btn btn--primary" id="btn-buy-life" type="button">
-        Leben kaufen &middot; <span id="revive-price">60</span> 💎
+    <div class="continue" id="continue-box">
+      <p class="continue__text">Weiterspielen mit <strong id="continue-moves">5</strong> Zügen?</p>
+      <button class="btn btn--primary btn--big" id="btn-continue-buy">
+        <span id="continue-price">40</span> &#128142;
       </button>
-      <p class="revive__state" id="revive-state"></p>
+      <p class="continue__state" id="continue-state"></p>
     </div>
-
-    <form class="score-form" id="score-form" autocomplete="off">
-      <label class="field">
-        <span class="field__label">Dein Name für die Bestenliste</span>
-        <input class="field__input" id="name-input" maxlength="16" placeholder="Spieler" required>
-      </label>
-      <button class="btn btn--primary" id="btn-submit" type="submit">Eintragen</button>
-    </form>
-    <p class="submit-state" id="submit-state" hidden></p>
 
     <div class="menu menu--row">
-      <button class="btn" id="btn-again">Nochmal</button>
-      <button class="btn btn--quiet" id="btn-over-menu">Menü</button>
+      <button class="btn" id="btn-fail-retry">Nochmal</button>
+      <button class="btn btn--quiet" id="btn-fail-map">Karte</button>
     </div>
+    <p class="fail__cost">Aufgeben kostet ein Leben &#10084;&#65039;</p>
   </div>
 </section>
 
 <!-- ============================= SHOP ============================ -->
 <section class="screen" id="screen-shop">
   <div class="panel panel--wide">
-    <h2 class="panel__title">Shop</h2>
+    <div class="ribbon">Shop</div>
     <p class="shop__balance">
-      Guthaben: <strong id="shop-crystals">0</strong> 💎
+      Guthaben: <strong id="shop-crystals">0</strong> &#128142;
       <span class="shop__hint">Kristalle gibt es für jedes geschaffte Level.</span>
     </p>
 
@@ -180,10 +186,10 @@
   </div>
 </section>
 
-<!-- ============================ SCORES =========================== -->
+<!-- ========================= BESTENLISTE ========================= -->
 <section class="screen" id="screen-scores">
   <div class="panel panel--wide">
-    <h2 class="panel__title">Bestenliste</h2>
+    <div class="ribbon">Bestenliste</div>
 
     <div class="tabs" role="tablist">
       <button class="tab is-active" id="tab-online" role="tab" aria-selected="true">Online</button>
@@ -194,43 +200,55 @@
 
     <ol class="scores" id="score-list"><li class="scores__empty">Lade&hellip;</li></ol>
 
+    <form class="score-form" id="score-form" autocomplete="off">
+      <label class="field">
+        <span class="field__label">Dein Name — trägt <strong id="submit-score">0</strong> Punkte ein</span>
+        <input class="field__input" id="name-input" maxlength="16" placeholder="Spieler" required>
+      </label>
+      <button class="btn btn--primary" id="btn-submit" type="submit">Eintragen</button>
+    </form>
+    <p class="submit-state" id="submit-state" hidden></p>
+
     <button class="btn" id="btn-scores-back">Zurück</button>
   </div>
 </section>
 
-<!-- ============================ HELP ============================= -->
+<!-- =========================== HILFE ============================= -->
 <section class="screen" id="screen-help">
   <div class="panel panel--wide">
-    <h2 class="panel__title">So wird gespielt</h2>
+    <div class="ribbon">So wird gespielt</div>
     <ul class="rules">
-      <li><b>Tauschen:</b> Ziehe einen Stein auf ein Nachbarfeld oder tippe beide nacheinander an. Passt der Zug nicht, federt er zurück.</li>
-      <li><b>Ziel:</b> Erreiche die Punktzahl, bevor die Zeit abläuft. Jeder Treffer schenkt dir etwas Zeit zurück.</li>
+      <li><b>Tauschen:</b> Ziehe einen Stein auf ein Nachbarfeld oder tippe beide nacheinander an. Passt der Zug nicht, federt er zurück &mdash; und kostet keinen Zug.</li>
+      <li><b>Ziel:</b> Jedes Level stellt eine Aufgabe. Erfülle sie, bevor die Züge alle sind.</li>
       <li><b>Kaskaden:</b> Nachrutschende Steine, die erneut treffen, erhöhen den Multiplikator &mdash; die dicken Punkte stecken in langen Ketten.</li>
+      <li><b>Zug-Finale:</b> Übrige Züge werden am Ende automatisch in Blitze verwandelt. Sparsam spielen lohnt sich.</li>
     </ul>
+
     <h3 class="panel__sub">Spezialsteine</h3>
     <ul class="rules rules--specials">
       <li><span class="chip chip--line"></span><b>Blitz</b> &mdash; aus 4 in einer Reihe. Räumt die ganze Zeile oder Spalte.</li>
       <li><span class="chip chip--bomb"></span><b>Bombe</b> &mdash; aus einer L- oder T-Form. Sprengt alles im Umkreis.</li>
       <li><span class="chip chip--rainbow"></span><b>Prisma</b> &mdash; aus 5 in einer Reihe. Tausche es mit einem Stein und alle Steine dieser Farbe verschwinden.</li>
-      <li><span class="chip chip--stone"></span><b>Fels</b> &mdash; ab Level 4. Lässt sich nicht tauschen, zerbricht aber durch Treffer nebenan.</li>
+      <li><span class="chip chip--stone"></span><b>Fels</b> &mdash; lässt sich nicht tauschen, zerbricht aber durch Treffer nebenan.</li>
     </ul>
 
     <h3 class="panel__sub">Leben, Kristalle, Power-Ups</h3>
     <ul class="rules">
-      <li><b>Leben:</b> Du hast <b id="help-lives">5</b> Versuche pro Tag. Jeder verlorene Lauf kostet einen; um Mitternacht sind sie wieder da.</li>
-      <li><b>Kristalle 💎:</b> Gibt es für jedes geschaffte Level &mdash; je schneller, desto mehr. Im Shop kaufst du dafür Leben und Power-Ups.</li>
-      <li><b>🔨 Hammer:</b> Zerschlägt einen beliebigen Stein, auch einen Fels.</li>
-      <li><b>🔀 Mischen:</b> Würfelt das Feld neu durch, wenn nichts mehr passt.</li>
-      <li><b>⏱️ Zeit:</b> Legt 15 Sekunden auf die Uhr.</li>
+      <li><b>Leben:</b> Du hast <b id="help-lives">5</b>. Ein verlorenes Level kostet eines; alle 30 Minuten wächst eines nach, und um Mitternacht sind alle wieder da.</li>
+      <li><b>Kristalle &#128142;:</b> Gibt es für jedes geschaffte Level &mdash; mehr Sterne, mehr Kristalle. Im Shop kaufst du dafür Leben und Power-Ups.</li>
+      <li><b>&#128296; Hammer:</b> Zerschlägt einen beliebigen Stein, auch einen Fels.</li>
+      <li><b>&#128256; Mischen:</b> Würfelt das Feld neu durch.</li>
+      <li><b>&#10133; Extra-Züge:</b> Legt 5 Züge drauf. Power-Ups kosten selbst keinen Zug.</li>
     </ul>
 
-    <p class="rules__note">Steuerung per Tastatur: Pfeiltasten bewegen, Leertaste wählt aus und tauscht, <kbd>P</kbd> pausiert.</p>
+    <p class="rules__note">Tastatur: Pfeiltasten bewegen, Leertaste wählt aus und tauscht, <kbd>P</kbd> pausiert.</p>
     <button class="btn" id="btn-help-back">Zurück</button>
   </div>
 </section>
 
 <script src="js/config.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/goals.js"></script>
 <script src="js/player.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/particles.js"></script>
@@ -238,6 +256,7 @@
 <script src="js/board.js"></script>
 <script src="js/leaderboard.js"></script>
 <script src="js/game.js"></script>
+<script src="js/map.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/main.js"></script>
 </body>

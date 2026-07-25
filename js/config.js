@@ -45,11 +45,15 @@
     POINTS_SPECIAL_CREATE: 150,
     POINTS_BLOCKER: 120,
 
-    /* Zeitgutschrift in Sekunden. Der Kaskadenanteil wird mit der
-       Kaskadenstufe multipliziert, lange Ketten lohnen sich also doppelt. */
-    TIME_PER_MATCH: 0.35,
-    TIME_PER_CASCADE: 0.45,
-    TIME_MAX_BONUS_PER_MOVE: 4,
+    /* Wie viele Zuege das Zug-Power-Up bringt. */
+    POWERUP_EXTRA_MOVES: 5,
+
+    /* Angebot im Verloren-Popup: Zuege nachkaufen, statt ein Herz zu
+       verlieren. Der Preis steigt mit jedem Nachkauf im selben Level, damit
+       sich ein Level nicht beliebig durchkaufen laesst. */
+    CONTINUE_MOVES: 5,
+    CONTINUE_PRICE: 40,
+    CONTINUE_PRICE_STEP: 30,
 
     /* ----------------------------------------------------------- Wirtschaft */
 
@@ -61,23 +65,24 @@
     LIVES_CAP: 10,
 
     /* Kristalle pro geschafftem Level: Grundwert, Zuschlag je Levelstufe und
-       Zuschlag je zwei uebrige Sekunden. */
+       Zuschlag je Stern. Sparsam gespielte Level lohnen sich damit doppelt. */
     CRYSTALS_BASE: 20,
-    CRYSTALS_PER_LEVEL: 5,
-    CRYSTALS_PER_2_SECONDS: 1,
+    CRYSTALS_PER_LEVEL: 3,
+    CRYSTALS_PER_STAR: 12,
 
     /* Preise im Shop. */
     PRICE_LIFE: 60,
     PRICE_HAMMER: 40,
     PRICE_SHUFFLE: 30,
-    PRICE_TIME: 50,
-
-    /* Wirkung des Zeit-Power-Ups in Sekunden. */
-    POWERUP_TIME_BONUS: 15,
+    PRICE_MOVES: 50,
 
     /* Startausstattung fuer neue Spieler — einmal jedes Power-Up zum
        Ausprobieren, sonst versteht niemand, wofuer die Kristalle gut sind. */
-    STARTING_POWERUPS: { hammer: 1, shuffle: 1, time: 1 },
+    STARTING_POWERUPS: { hammer: 1, shuffle: 1, moves: 1 },
+
+    /* --------------------------------------------------------------- Leben */
+    /* Alle 30 Minuten kommt ein Herz zurueck. */
+    LIFE_REGEN_MS: 30 * 60 * 1000,
 
     /* ------------------------------------------------------- Speicherschluessel */
     STORE_SCORES: 'gemcascade.scores.v1',
@@ -85,6 +90,7 @@
     STORE_NAME: 'gemcascade.name.v1',
     STORE_MUTED: 'gemcascade.muted.v1',
     STORE_PROGRESS: 'gemcascade.progress.v1',
+    STORE_LIFETIME: 'gemcascade.lifetime.v1',
     STORE_PENDING: 'gemcascade.pending.v1'
   };
 

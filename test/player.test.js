@@ -82,7 +82,7 @@ section('Startzustand');
   check('Startausstattung an Power-Ups',
     p.powerups.hammer === CONFIG.STARTING_POWERUPS.hammer &&
     p.powerups.shuffle === CONFIG.STARTING_POWERUPS.shuffle &&
-    p.powerups.time === CONFIG.STARTING_POWERUPS.time,
+    p.powerups.moves === CONFIG.STARTING_POWERUPS.moves,
     JSON.stringify(p.powerups));
   check('Profil wird sofort gespeichert', stored() !== null);
 }
@@ -111,7 +111,7 @@ section('Tageswechsel');
 
 {
   /* Gestern aufgebraucht -> heute wieder voll. */
-  loadWith({ crystals: 10, lives: 0, day: yesterdayKey(), powerups: { hammer: 0, shuffle: 0, time: 0 } });
+  loadWith({ crystals: 10, lives: 0, day: yesterdayKey(), powerups: { hammer: 0, shuffle: 0, moves: 0 } });
 
   const p = Player.snapshot();
   check('Neuer Tag stellt die Leben her', p.lives === CONFIG.MAX_LIVES, String(p.lives));
@@ -140,6 +140,108 @@ section('Tageswechsel');
 }
 
 /* ========================================================================= */
+section('Herz-Nachfuell-Timer');
+/* ========================================================================= */
+
+const HALF_HOUR = CONFIG.LIFE_REGEN_MS;
+
+{
+  /* Volle Leben: die Uhr laeuft gar nicht erst. */
+  fresh();
+  const p = Player.snapshot();
+  check('Bei vollen Leben laeuft keine Uhr', p.nextRegenAt === 0, String(p.nextRegenAt));
+  check('Kein Countdown bei vollen Leben', p.msToNextLife === 0);
+}
+
+{
+  /* Ein verlorenes Level startet die Uhr. */
+  fresh();
+  Player.loseLife();
+
+  const p = Player.snapshot();
+  check('Fehlendes Herz startet die Uhr', p.nextRegenAt > 0);
+  check('Countdown liegt bei rund 30 Minuten',
+    p.msToNextLife > HALF_HOUR - 5000 && p.msToNextLife <= HALF_HOUR,
+    String(p.msToNextLife));
+}
+
+{
+  /* Ein faelliges Fenster gibt genau ein Herz. */
+  loadWith({
+    crystals: 0, lives: 2, day: stored() ? stored().day : undefined,
+    nextRegenAt: Date.now() - 1000, powerups: {}
+  });
+
+  check('Faelliges Fenster gibt ein Herz', Player.snapshot().lives === 3,
+    String(Player.snapshot().lives));
+  check('Danach laeuft die Uhr weiter', Player.snapshot().nextRegenAt > 0);
+}
+
+{
+  /* Mehrere Fenster auf einmal — Tab war lange zu. */
+  const today = (() => { fresh(); return stored().day; })();
+  loadWith({
+    crystals: 0, lives: 0, day: today,
+    nextRegenAt: Date.now() - HALF_HOUR * 2.5, powerups: {}
+  });
+
+  check('Drei vergangene Fenster geben drei Herzen',
+    Player.snapshot().lives === 3, String(Player.snapshot().lives));
+}
+
+{
+  /* Deckel bei MAX_LIVES, egal wie viel Zeit vergangen ist. */
+  const today = (() => { fresh(); return stored().day; })();
+  loadWith({
+    crystals: 0, lives: 1, day: today,
+    nextRegenAt: Date.now() - HALF_HOUR * 50, powerups: {}
+  });
+
+  const p = Player.snapshot();
+  check('Nachfuellen stoppt beim Maximum', p.lives === CONFIG.MAX_LIVES, String(p.lives));
+  check('Bei vollem Stand wird die Uhr abgeschaltet', p.nextRegenAt === 0);
+}
+
+{
+  /* Gekaufte Extraleben ueber dem Maximum werden nicht angefasst. */
+  const today = (() => { fresh(); return stored().day; })();
+  const extra = CONFIG.MAX_LIVES + 3;
+  loadWith({
+    crystals: 0, lives: extra, day: today,
+    nextRegenAt: Date.now() - HALF_HOUR * 10, powerups: {}
+  });
+
+  check('Extraleben bleiben unangetastet', Player.snapshot().lives === extra,
+    String(Player.snapshot().lives));
+  check('Und die Uhr laeuft nicht', Player.snapshot().nextRegenAt === 0);
+}
+
+{
+  /* Noch nicht faellig: nichts passiert. */
+  const today = (() => { fresh(); return stored().day; })();
+  loadWith({
+    crystals: 0, lives: 2, day: today,
+    nextRegenAt: Date.now() + HALF_HOUR * 0.5, powerups: {}
+  });
+
+  check('Vor Ablauf kommt kein Herz dazu', Player.snapshot().lives === 2);
+}
+
+{
+  /* Der Tageswechsel gewinnt gegen die Uhr: morgens sind es wieder fuenf,
+     auch wenn erst ein Fenster vergangen waere. */
+  loadWith({
+    crystals: 0, lives: 0, day: yesterdayKey(),
+    nextRegenAt: Date.now() + HALF_HOUR, powerups: {}
+  });
+
+  const p = Player.snapshot();
+  check('Mitternacht fuellt trotz laufender Uhr komplett auf',
+    p.lives === CONFIG.MAX_LIVES, String(p.lives));
+  check('Und stellt die Uhr ab', p.nextRegenAt === 0);
+}
+
+/* ========================================================================= */
 section('Kristalle');
 /* ========================================================================= */
 
@@ -147,18 +249,21 @@ section('Kristalle');
   fresh();
 
   const base = CONFIG.CRYSTALS_BASE + CONFIG.CRYSTALS_PER_LEVEL;
-  check('Level 1 ohne Restzeit', Player.crystalsForLevel(1, 0) === base,
+  check('Level 1 ohne Sterne', Player.crystalsForLevel(1, 0) === base,
     String(Player.crystalsForLevel(1, 0)));
 
-  check('Restzeit zahlt sich aus',
-    Player.crystalsForLevel(1, 20) === base + 10,
-    String(Player.crystalsForLevel(1, 20)));
+  check('Jeder Stern zahlt sich aus',
+    Player.crystalsForLevel(1, 3) === base + 3 * CONFIG.CRYSTALS_PER_STAR,
+    String(Player.crystalsForLevel(1, 3)));
 
   check('Hoehere Level bringen mehr',
     Player.crystalsForLevel(5, 0) > Player.crystalsForLevel(1, 0));
 
-  check('Negative Restzeit zaehlt als null',
-    Player.crystalsForLevel(1, -50) === base);
+  check('Mehr als drei Sterne zaehlen nicht',
+    Player.crystalsForLevel(1, 99) === Player.crystalsForLevel(1, 3));
+
+  check('Unsinnige Sternzahl faellt auf null',
+    Player.crystalsForLevel(1, -5) === base);
 
   Player.earn(100);
   check('Kristalle werden gutgeschrieben', Player.snapshot().crystals === 100);
