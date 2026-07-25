@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0a1f">
+<title>Gem Cascade — Match 3</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128142;</text></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
+<div id="vignette" aria-hidden="true"></div>
+
+<!-- ============================ START ============================ -->
+<section class="screen is-active" id="screen-start">
+  <div class="panel panel--hero">
+    <h1 class="title">
+      <span class="title__word">Gem</span>
+      <span class="title__word title__word--accent">Cascade</span>
+    </h1>
+    <p class="tagline">Kombiniere drei. Jage die Kaskade. Schlag die Uhr.</p>
+    <div class="menu">
+      <button class="btn btn--primary btn--big" id="btn-play">Spielen</button>
+      <button class="btn" id="btn-continue" hidden>Level <span id="continue-level">1</span> fortsetzen</button>
+      <button class="btn" id="btn-scores">Bestenliste</button>
+      <button class="btn" id="btn-help">Anleitung</button>
+    </div>
+    <p class="best-line">Persönlicher Rekord: <strong id="start-best">0</strong></p>
+  </div>
+  <button class="icon-btn icon-btn--float" id="btn-mute" title="Ton an/aus" aria-label="Ton an/aus">
+    <span class="icon-btn__on">&#128266;</span><span class="icon-btn__off">&#128263;</span>
+  </button>
+</section>
+
+<!-- ============================ GAME ============================= -->
+<section class="screen" id="screen-game">
+  <header class="hud">
+    <div class="hud__row">
+      <div class="stat stat--level">
+        <span class="stat__label">Level</span>
+        <span class="stat__value" id="hud-level">1</span>
+      </div>
+      <div class="stat stat--score">
+        <span class="stat__label">Punkte</span>
+        <span class="stat__value" id="hud-score">0</span>
+      </div>
+      <div class="hud__actions">
+        <button class="icon-btn" id="btn-pause" title="Pause" aria-label="Pause">&#10073;&#10073;</button>
+      </div>
+    </div>
+
+    <div class="meter meter--goal">
+      <div class="meter__fill" id="goal-fill"></div>
+      <div class="meter__text"><span id="goal-text">0 / 1000</span></div>
+    </div>
+
+    <div class="meter meter--time" id="time-meter">
+      <div class="meter__fill" id="time-fill"></div>
+      <div class="meter__text"><span id="time-text">1:00</span></div>
+    </div>
+  </header>
+
+  <div class="board-wrap">
+    <canvas id="board-canvas" role="application" tabindex="0"
+            aria-label="Spielfeld. Mit Pfeiltasten bewegen, Leertaste zum Auswählen und Tauschen."></canvas>
+  </div>
+
+  <footer class="game-foot">
+    <span class="hint" id="game-hint">Ziehe oder tippe zwei benachbarte Steine</span>
+  </footer>
+</section>
+
+<!-- ============================ OVERLAYS ========================= -->
+<section class="screen screen--overlay" id="screen-pause">
+  <div class="panel">
+    <h2 class="panel__title">Pause</h2>
+    <div class="menu">
+      <button class="btn btn--primary" id="btn-resume">Weiter</button>
+      <button class="btn" id="btn-restart">Level neu starten</button>
+      <button class="btn btn--quiet" id="btn-quit">Aufgeben</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen screen--overlay" id="screen-level">
+  <div class="panel panel--celebrate">
+    <div class="burst" aria-hidden="true"></div>
+    <h2 class="panel__title">Level geschafft!</h2>
+    <dl class="tally">
+      <div class="tally__row"><dt>Punkte</dt><dd id="lvl-score">0</dd></div>
+      <div class="tally__row"><dt>Zeitbonus</dt><dd id="lvl-bonus">+0</dd></div>
+      <div class="tally__row"><dt>Zeit mitgenommen</dt><dd id="lvl-carry">+0s</dd></div>
+      <div class="tally__row tally__row--total"><dt>Gesamt</dt><dd id="lvl-total">0</dd></div>
+    </dl>
+    <button class="btn btn--primary btn--big" id="btn-next">Level <span id="lvl-next-num">2</span></button>
+  </div>
+</section>
+
+<section class="screen screen--overlay" id="screen-over">
+  <div class="panel">
+    <h2 class="panel__title panel__title--sad">Zeit abgelaufen</h2>
+    <p class="final-score"><span id="over-score">0</span></p>
+    <p class="final-sub">Level <span id="over-level">1</span> &middot; <span id="over-note">Neuer Rekord!</span></p>
+
+    <form class="score-form" id="score-form" autocomplete="off">
+      <label class="field">
+        <span class="field__label">Dein Name für die Bestenliste</span>
+        <input class="field__input" id="name-input" maxlength="16" placeholder="Spieler" required>
+      </label>
+      <button class="btn btn--primary" id="btn-submit" type="submit">Eintragen</button>
+    </form>
+    <p class="submit-state" id="submit-state" hidden></p>
+
+    <div class="menu menu--row">
+      <button class="btn" id="btn-again">Nochmal</button>
+      <button class="btn btn--quiet" id="btn-over-menu">Menü</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SCORES =========================== -->
+<section class="screen" id="screen-scores">
+  <div class="panel panel--wide">
+    <h2 class="panel__title">Bestenliste</h2>
+
+    <div class="tabs" role="tablist">
+      <button class="tab is-active" id="tab-online" role="tab" aria-selected="true">Online</button>
+      <button class="tab" id="tab-local" role="tab" aria-selected="false">Lokal</button>
+    </div>
+
+    <p class="badge badge--offline" id="offline-badge" hidden>Offline &mdash; zeigt die lokale Bestenliste</p>
+
+    <ol class="scores" id="score-list"><li class="scores__empty">Lade&hellip;</li></ol>
+
+    <button class="btn" id="btn-scores-back">Zurück</button>
+  </div>
+</section>
+
+<!-- ============================ HELP ============================= -->
+<section class="screen" id="screen-help">
+  <div class="panel panel--wide">
+    <h2 class="panel__title">So wird gespielt</h2>
+    <ul class="rules">
+      <li><b>Tauschen:</b> Ziehe einen Stein auf ein Nachbarfeld oder tippe beide nacheinander an. Passt der Zug nicht, federt er zurück.</li>
+      <li><b>Ziel:</b> Erreiche die Punktzahl, bevor die Zeit abläuft. Jeder Treffer schenkt dir etwas Zeit zurück.</li>
+      <li><b>Kaskaden:</b> Nachrutschende Steine, die erneut treffen, erhöhen den Multiplikator &mdash; die dicken Punkte stecken in langen Ketten.</li>
+    </ul>
+    <h3 class="panel__sub">Spezialsteine</h3>
+    <ul class="rules rules--specials">
+      <li><span class="chip chip--line"></span><b>Blitz</b> &mdash; aus 4 in einer Reihe. Räumt die ganze Zeile oder Spalte.</li>
+      <li><span class="chip chip--bomb"></span><b>Bombe</b> &mdash; aus einer L- oder T-Form. Sprengt alles im Umkreis.</li>
+      <li><span class="chip chip--rainbow"></span><b>Prisma</b> &mdash; aus 5 in einer Reihe. Tausche es mit einem Stein und alle Steine dieser Farbe verschwinden.</li>
+      <li><span class="chip chip--stone"></span><b>Fels</b> &mdash; ab Level 4. Lässt sich nicht tauschen, zerbricht aber durch Treffer nebenan.</li>
+    </ul>
+    <p class="rules__note">Steuerung per Tastatur: Pfeiltasten bewegen, Leertaste wählt aus und tauscht, <kbd>P</kbd> pausiert.</p>
+    <button class="btn" id="btn-help-back">Zurück</button>
+  </div>
+</section>
+
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/particles.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/board.js"></script>
+<script src="js/leaderboard.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

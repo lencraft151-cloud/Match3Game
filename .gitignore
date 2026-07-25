@@ -1,0 +1,8 @@
+# Bestenliste des lokalen Servers — Laufzeitdaten, gehoert nicht ins Repo.
+server/scores.json
+server/scores.json.tmp
+server/scores.json.broken-*
+
+node_modules/
+.DS_Store
+*.log

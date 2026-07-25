@@ -1,0 +1,67 @@
+name: GitHub Pages
+
+# Veroeffentlicht das Spiel bei jedem Push auf den Entwicklungsbranch.
+# Einmalig noetig: Repository -> Settings -> Pages -> Source auf
+# "GitHub Actions" stellen.
+
+on:
+  push:
+    branches:
+      - main
+      - claude/match3-game-animations-xy2ooe
+  workflow_dispatch:
+
+# Nur Lesezugriff aufs Repo, dazu die beiden Rechte, die das Pages-Deployment
+# selbst braucht.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Laeuft ein Deployment schon, wird es nicht abgebrochen — sonst kann eine
+# halb veroeffentlichte Seite zurueckbleiben.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  test:
+    name: Board-Logik testen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Tests
+        run: node test/board.test.js
+
+  deploy:
+    name: Veroeffentlichen
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - name: Statische Dateien einsammeln
+        # Das Spiel braucht keinen Build. Server, Tests und Git-Interna
+        # gehoeren aber nicht auf die veroeffentlichte Seite.
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          cp -r css js _site/
+          cp README.md _site/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
