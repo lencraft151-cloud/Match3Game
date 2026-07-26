@@ -85,6 +85,10 @@ fi
   --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
   --out "$OUT" aligned.apk
 
-mkdir -p "$(dirname "$OUT")"
+# apksigner legt daneben eine .idsig fuer das v4-Schema ab. Die braucht nur,
+# wer per `adb install --incremental` installiert — fuer einen Download ist
+# sie nutzlos und hat im Repo nichts verloren.
+rm -f "$OUT.idsig"
+
 echo
 echo "fertig: $OUT  ($(du -h "$OUT" | cut -f1))"

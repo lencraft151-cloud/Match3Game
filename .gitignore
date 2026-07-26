@@ -6,3 +6,4 @@ server/scores.json.broken-*
 node_modules/
 .DS_Store
 *.log
+download/*.idsig
