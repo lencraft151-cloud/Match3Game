@@ -1745,7 +1745,16 @@ body.is-arming #board-canvas { cursor: crosshair; }
 }
 
 .chip--line    { background: linear-gradient(135deg, #fff, #38f2d8); box-shadow: 0 0 10px #38f2d8; }
-.chip--bomb    { background: linear-gradient(135deg, #ffd36b, #ff5b3d); border-radius: 50%; box-shadow: 0 0 10px #ff7a3d; }
+/* Das Kreuz-Symbol wird aus zwei Balken gebaut, nicht aus einem Zeichen —
+   so sieht es aus wie der Stein auf dem Brett. */
+.chip--cross {
+  background:
+    linear-gradient(#ffffff, #ffffff) center / 100% 5px no-repeat,
+    linear-gradient(#ffffff, #ffffff) center / 5px 100% no-repeat,
+    linear-gradient(135deg, #9fe4ff, #3f8fe0);
+  border-radius: 6px;
+  box-shadow: 0 0 10px #56b8ff;
+}
 .chip--rainbow { background: conic-gradient(#ff4f7b, #ffcc4d, #7ee787, #38f2d8, #b36bff, #ff4f7b); border-radius: 50%; box-shadow: 0 0 10px #b36bff; }
 .chip--stone   { background: linear-gradient(135deg, #7c799a, #3b3856); }
 

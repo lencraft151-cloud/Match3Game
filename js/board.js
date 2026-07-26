@@ -8,7 +8,7 @@
              'rainbow'  Prisma; matcht nie, wirkt nur beim Tausch
              'blocker'  Fels; nicht tauschbar, zerbricht durch Treffer nebenan
      type    Farbindex 0..colors-1 (nur bei kind 'gem')
-     special SPECIAL.* — Blitz oder Bombe, nur bei kind 'gem'
+     special SPECIAL.* — Blitz oder Kreuz, nur bei kind 'gem'
 
    Rendering-Felder (Position, Skalierung) haengt game.js zusaetzlich an
    dasselbe Objekt; board.js fasst sie nie an.
@@ -21,11 +21,20 @@
     ? require('./utils.js')
     : root.M3.Utils;
 
+  /* Die Spezialsteine, die aus Kombinationen entstehen. Sie sind bewusst von
+     den gekauften Boostern getrennt: kein Stein auf dem Brett macht dasselbe
+     wie etwas, das im Shop Kristalle kostet. Sonst waere der Kauf entwertet.
+
+       Blitz  raeumt eine Linie, Richtung durch die Kette bestimmt
+       Kreuz  raeumt Zeile UND Spalte
+       Prisma raeumt eine ganze Farbe (eigener kind, siehe game.js)
+
+     Die 3x3-Sprengung gehoert allein der Bombe aus dem Shop. */
   var SPECIAL = {
     NONE: 0,
     LINE_H: 1,   /* raeumt die Zeile */
     LINE_V: 2,   /* raeumt die Spalte */
-    BOMB: 3      /* raeumt 3x3 */
+    CROSS: 3     /* raeumt Zeile und Spalte zugleich */
   };
 
   var nextGemId = 1;
@@ -235,7 +244,7 @@
   };
 
   /* Fasst ueberlappende Ketten zu Clustern zusammen (Union-Find), damit
-     L- und T-Formen als eine Einheit gelten und eine Bombe erzeugen. */
+     L- und T-Formen als eine Einheit gelten und ein Kreuz erzeugen. */
   Board.prototype.findClusters = function () {
     var runs = this.findRuns();
     if (!runs.length) return [];
@@ -295,12 +304,13 @@
 
   /* Welcher Spezialstein entsteht aus einem Cluster?
        5 in einer Reihe        -> Prisma (als eigener kind, siehe game.js)
-       L-/T-Form (H und V)     -> Bombe
+       L-/T-Form (H und V)     -> Kreuz
        genau 4 in einer Reihe  -> Blitz in Richtung der Kette
-     Ein waagerechter Vierer erzeugt also einen Blitz, der die Zeile raeumt. */
+     Ein waagerechter Vierer erzeugt also einen Blitz, der die Zeile raeumt.
+     Die L-Form kreuzt zwei Richtungen — der Stein daraus tut dasselbe. */
   Board.specialForCluster = function (cluster) {
     if (cluster.maxH >= 5 || cluster.maxV >= 5) return 'rainbow';
-    if (cluster.maxH >= 3 && cluster.maxV >= 3) return SPECIAL.BOMB;
+    if (cluster.maxH >= 3 && cluster.maxV >= 3) return SPECIAL.CROSS;
     if (cluster.maxH === 4) return SPECIAL.LINE_H;
     if (cluster.maxV === 4) return SPECIAL.LINE_V;
     return SPECIAL.NONE;
@@ -464,14 +474,16 @@
 
     if (gem.special === SPECIAL.LINE_H) {
       for (i = 0; i < this.cols; i++) out.push(this.idx(i, r));
+
     } else if (gem.special === SPECIAL.LINE_V) {
       for (i = 0; i < this.rows; i++) out.push(this.idx(c, i));
-    } else if (gem.special === SPECIAL.BOMB) {
-      for (var dr = -1; dr <= 1; dr++) {
-        for (var dc = -1; dc <= 1; dc++) {
-          if (this.inBounds(c + dc, r + dr)) out.push(this.idx(c + dc, r + dr));
-        }
-      }
+
+    } else if (gem.special === SPECIAL.CROSS) {
+      /* Zeile und Spalte zugleich. Das eigene Feld liegt in beiden Schleifen,
+         steht danach also doppelt in der Liste — resolveBlast arbeitet mit
+         einem Set, das faengt es ab. */
+      for (i = 0; i < this.cols; i++) out.push(this.idx(i, r));
+      for (i = 0; i < this.rows; i++) out.push(this.idx(c, i));
     }
 
     return out;

@@ -115,12 +115,20 @@ Wie viele Züge beim Erfüllen der Aufgaben übrig waren:
 
 | Entsteht aus | Stein | Wirkung |
 |---|---|---|
-| 4 in einer Reihe | **Blitz** | Räumt die ganze Zeile oder Spalte |
-| L- oder T-Form | **Bombe** | Sprengt alles im Umkreis von einem Feld |
+| 4 in einer Reihe | **Blitz** | Räumt die Zeile oder Spalte — in Richtung deiner Kette |
+| L- oder T-Form | **Kreuz** | Räumt Zeile **und** Spalte auf einmal |
 | 5 in einer Reihe | **Prisma** | Beim Tausch verschwinden alle Steine der getauschten Farbe |
 
 Spezialsteine, die von einer Explosion getroffen werden, zünden ihrerseits.
 Zwei getauschte Prismen räumen das komplette Feld.
+
+Die Steine auf dem Brett und die Booster aus dem Shop überschneiden sich
+bewusst **nicht**: Die 3×3-Sprengung gibt es nur als gekaufte Bombe, und wo
+Blitz und Rakete beide eine Linie räumen, unterscheidet sich der Weg dorthin
+— beim Blitz bestimmt die Richtung deiner Kette, wohin er schlägt, bei der
+Rakete entscheidet der Zufall. Der verdiente Stein ist der planbare. Vorher
+hieß der Stein aus der L-Form ebenfalls „Bombe" und tat dasselbe wie der
+gekaufte Booster; damit war der Kauf entwertet.
 
 **Felsen** liegen ab Level 4 im Weg: nicht tauschbar, aber sie zerbrechen,
 wenn direkt daneben ein Treffer landet. Gibt es keinen gültigen Zug mehr,

@@ -979,11 +979,16 @@
     } else if (act.special === SPECIAL.LINE_V) {
       this.fx.beam(pos.x, this.pad, span, this.cell * 0.5, false, COLORS[act.type % COLORS.length]);
       Audio.beam();
-    } else if (act.special === SPECIAL.BOMB) {
-      this.fx.ring(pos.x, pos.y, this.cell * 2.4, '#ffb44d', 6);
-      this.fx.burst(pos.x, pos.y, '#ffb44d', 22, 1.4);
-      Audio.explode();
-      this.addShake(9);
+    } else if (act.special === SPECIAL.CROSS) {
+      /* Zwei Strahlen zugleich — man soll sehen, dass hier zwei Richtungen
+         auf einmal gehen, nicht nur eine besonders laute. */
+      var tint = COLORS[act.type % COLORS.length];
+      this.fx.beam(this.pad, pos.y, span, this.cell * 0.55, true, tint);
+      this.fx.beam(pos.x, this.pad, span, this.cell * 0.55, false, tint);
+      this.fx.ring(pos.x, pos.y, this.cell * 2.2, '#ffffff', 5);
+      this.fx.burst(pos.x, pos.y, tint, 20, 1.3);
+      Audio.beam();
+      this.addShake(10);
     }
   };
 
@@ -1585,8 +1590,8 @@
 
     if (gem.special === SPECIAL.LINE_H || gem.special === SPECIAL.LINE_V) {
       drawLineMarks(ctx, radius, gem.special === SPECIAL.LINE_H);
-    } else if (gem.special === SPECIAL.BOMB) {
-      drawBombMarks(ctx, radius, time || 0);
+    } else if (gem.special === SPECIAL.CROSS) {
+      drawCrossMarks(ctx, radius, time || 0);
     }
 
     ctx.restore();
@@ -1887,22 +1892,33 @@
     ctx.restore();
   }
 
-  function drawBombMarks(ctx, r, time) {
+  /* Das Kreuz: zwei Doppelstriche ueber Kreuz, die mit dem Puls nach aussen
+     atmen. Die Markierung sagt damit dasselbe wie die Wirkung — Zeile und
+     Spalte. Die alte Bombenkugel sass hier, solange die L-Form eine Bombe
+     erzeugte; die Bombe gehoert inzwischen allein dem Shop. */
+  function drawCrossMarks(ctx, r, time) {
+    var pulse = 0.94 + 0.08 * Math.sin(time * 6);
+    var arm = r * 0.78 * pulse;
+    var gap = r * 0.19;
+    var bar = Math.max(1.2, r * 0.085);
+
     ctx.save();
-    ctx.globalAlpha = 0.9;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = Math.max(1.5, r * 0.12);
-    ctx.shadowBlur = 12;
-    ctx.shadowColor = '#fff3c4';
-
-    var pulse = 0.72 + 0.16 * Math.sin(time * 7);
-    ctx.beginPath();
-    ctx.arc(0, 0, r * pulse, 0, Math.PI * 2);
-    ctx.stroke();
-
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 0.24, 0, Math.PI * 2);
+    ctx.globalAlpha = 0.95;
     ctx.fillStyle = '#ffffff';
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = '#ffffff';
+
+    /* Waagerecht */
+    ctx.fillRect(-arm, -gap - bar / 2, arm * 2, bar);
+    ctx.fillRect(-arm, gap - bar / 2, arm * 2, bar);
+    /* Senkrecht */
+    ctx.fillRect(-gap - bar / 2, -arm, bar, arm * 2);
+    ctx.fillRect(gap - bar / 2, -arm, bar, arm * 2);
+
+    /* Kern in der Mitte, wo sich beide treffen. */
+    ctx.shadowBlur = 14;
+    ctx.beginPath();
+    ctx.arc(0, 0, r * 0.16, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }

@@ -147,7 +147,9 @@ section('Match-Erkennung');
 
   check('L-Form ergibt einen einzigen Cluster', !!corner && corner.cells.length === 5,
     corner ? `${corner.cells.length} Felder` : 'kein Cluster');
-  check('L-Form erzeugt eine Bombe', corner && corner.special === SPECIAL.BOMB,
+  /* Aus der L-Form entsteht das Kreuz, nicht mehr die Bombe: die
+     3x3-Sprengung gehoert seit dem Booster-Umbau allein dem Shop. */
+  check('L-Form erzeugt ein Kreuz', corner && corner.special === SPECIAL.CROSS,
     corner ? `special=${corner.special}` : 'kein Cluster');
 }
 
@@ -374,10 +376,26 @@ section('Explosionen');
   ], 7);
 
   const idx = board.idx(4, 4);
-  board.cells[idx].special = SPECIAL.BOMB;
+  board.cells[idx].special = SPECIAL.CROSS;
 
   const blast = board.resolveBlast([idx], {});
-  check('Bombe raeumt 3x3', blast.cleared.length === 9, `${blast.cleared.length} Felder`);
+
+  /* Zeile plus Spalte, das gemeinsame Feld nur einmal. Ohne die
+     Doppelzaehlung waeren es cols + rows. */
+  const expected = board.cols + board.rows - 1;
+  check('Kreuz raeumt Zeile und Spalte', blast.cleared.length === expected,
+    `${blast.cleared.length} statt ${expected} Felder`);
+
+  /* Und zwar wirklich beide Richtungen, nicht zweimal dieselbe. */
+  const rows = new Set(blast.cleared.map((i) => board.rowOf(i)));
+  const cols = new Set(blast.cleared.map((i) => board.colOf(i)));
+  check('Die ganze Zeile ist dabei', cols.size === board.cols, String(cols.size));
+  check('Die ganze Spalte auch', rows.size === board.rows, String(rows.size));
+
+  /* Kein Feld doppelt — sonst zaehlte der Fortschritt Steine mehrfach. */
+  check('Kein Feld steht doppelt drin',
+    new Set(blast.cleared).size === blast.cleared.length,
+    `${blast.cleared.length} Eintraege, ${new Set(blast.cleared).size} verschieden`);
 }
 
 {

@@ -72,7 +72,7 @@
       wait: 'tap',
       guide: 'read',
       text: 'Vier gleiche in einer Reihe geben einen <b>Blitz</b>, eine L-Form ' +
-            'eine <b>Bombe</b>, fünf in einer Reihe ein <b>Prisma</b>. ' +
+            'ein <b>Kreuz</b>, fünf in einer Reihe ein <b>Prisma</b>. ' +
             'Die räumen richtig auf.'
     },
     {
