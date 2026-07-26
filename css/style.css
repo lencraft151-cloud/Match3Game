@@ -138,9 +138,17 @@ body {
 /* ------------------------------------------------------------------- Panels */
 
 .panel {
+  /* Der Innenabstand liegt in Variablen, damit schmale Schirme ihn aendern
+     koennen, ohne den Bannerplatz mit abzuraeumen — genau das ist hier schon
+     einmal passiert und hat den Pausetext unter die Knoepfe geschoben. */
+  --pad-x: 24px;
+  --pad-t: 34px;
+  --pad-b: 26px;
+  --ribbon-space: 0px;
+
   position: relative;
   width: min(440px, 100%);
-  padding: 34px 24px 26px;
+  padding: calc(var(--pad-t) + var(--ribbon-space)) var(--pad-x) var(--pad-b);
   border-radius: var(--radius);
   border: 3px solid var(--gold);
   background: linear-gradient(180deg, var(--royal-700), var(--royal-800) 70%);
@@ -151,13 +159,17 @@ body {
   overflow-y: auto;
 }
 
-.panel--hero { padding: 42px 24px 30px; }
+.panel--hero { --pad-t: 42px; --pad-b: 30px; }
 
 /* Panels mit Banner brauchen oben Platz. Das Banner kann nicht ueber den
    Rand hinausragen: `overflow-y: auto` macht laut Spezifikation auch aus
-   `overflow-x: visible` ein `auto` — es wuerde also abgeschnitten. */
-.panel--wide { width: min(540px, 100%); padding-top: 62px; }
-.panel--card { padding-top: 62px; }
+   `overflow-x: visible` ein `auto` — es wuerde also abgeschnitten.
+
+   Der Platz wird auf den Innenabstand *addiert*, nicht an seine Stelle
+   gesetzt. Nur so kann eine spaetere Regel den Abstand aendern, ohne das
+   Banner auf den Inhalt fallen zu lassen. */
+.panel--wide { width: min(540px, 100%); --ribbon-space: 28px; }
+.panel--card { --ribbon-space: 28px; }
 
 @keyframes panel-in {
   from { opacity: 0; transform: translateY(20px) scale(0.94); }
@@ -171,15 +183,20 @@ body {
   left: 50%;
   transform: translateX(-50%);
   min-width: 62%;
+  /* Damit ein langer Titel wie "Keine Züge mehr" auf schmalen Schirmen
+     schrumpft statt aus dem Panel zu laufen. */
+  max-width: calc(100% - 20px);
   padding: 9px 26px;
   border-radius: 999px;
   border: 3px solid var(--gold-dark);
   background: linear-gradient(180deg, var(--gold-light), var(--gold));
   color: #4a2f00;
-  font-size: 19px;
+  font-size: clamp(15px, 4.6vw, 19px);
   font-weight: 800;
   letter-spacing: 0.4px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   box-shadow: 0 5px 0 var(--gold-dark), 0 12px 22px rgba(0, 0, 0, 0.35);
 }
 
@@ -263,6 +280,20 @@ body {
 }
 
 .btn:focus-visible { outline: 3px solid var(--gold-light); outline-offset: 3px; }
+
+/* Was der Knopf kostet, steht auf dem Knopf — ein Leben soll nicht
+   unangekuendigt verschwinden. */
+.btn__cost {
+  display: inline-block;
+  margin-left: 7px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--gold-light);
+  font-size: 12px;
+  font-weight: 800;
+  vertical-align: 1px;
+}
 
 .btn--primary {
   background: linear-gradient(180deg, var(--gold-light), var(--gold));
@@ -419,12 +450,15 @@ body.is-muted .icon-btn__off { display: inline; }
   gap: 4px;
 }
 
+/* Die Knoten sind Steinplatten auf dem Weg: eine dunkle Standkante unten,
+   ein Lichtsaum oben, dazu ein feiner Innenschein. */
 .node {
   appearance: none;
+  position: relative;
   width: 62px;
   height: 62px;
   border-radius: 50%;
-  border: 3px solid rgba(0, 0, 0, 0.25);
+  border: 3px solid rgba(0, 0, 0, 0.3);
   font-family: inherit;
   font-size: 21px;
   font-weight: 800;
@@ -432,39 +466,94 @@ body.is-muted .icon-btn__off { display: inline; }
   display: grid;
   place-items: center;
   color: #3a2500;
-  background: linear-gradient(180deg, var(--gold-light), var(--gold));
-  box-shadow: var(--shadow-node);
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.85), transparent 58%),
+    linear-gradient(180deg, var(--gold-light), var(--gold) 62%, var(--gold-dark));
+  box-shadow:
+    var(--shadow-node),
+    inset 0 -4px 6px rgba(120, 68, 0, 0.4),
+    inset 0 3px 5px rgba(255, 255, 255, 0.55);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
   transition: transform 0.12s ease;
 }
 
 .node:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.28); }
 .node:focus-visible { outline: 3px solid var(--cream); outline-offset: 3px; }
 
-/* Geschafft: etwas ruhiger als das aktuelle Level. */
+/* Geschafft: ruhiger als das aktuelle Level, aber mit goldenem Schein —
+   die Bahn hinter dir soll erledigt aussehen, nicht abgeschaltet. */
 .node--done {
-  background: linear-gradient(180deg, #ffdf8c, var(--gold-dark));
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.7), transparent 58%),
+    linear-gradient(180deg, #ffdf8c, var(--gold-dark));
+  box-shadow:
+    var(--shadow-node),
+    inset 0 -4px 6px rgba(120, 68, 0, 0.45),
+    0 0 16px rgba(255, 201, 60, 0.35);
 }
 
-/* Aktuell: heller, groesser, pulsiert. */
+/* Aktuell: heller, groesser, pulsiert deutlicher. */
 .node--current {
   width: 72px;
   height: 72px;
   font-size: 24px;
-  background: linear-gradient(180deg, #ffffff, var(--gold-light));
-  box-shadow: 0 5px 0 var(--gold-dark), 0 0 0 6px rgba(255, 201, 60, 0.28);
+  background:
+    radial-gradient(circle at 34% 24%, #ffffff, transparent 60%),
+    linear-gradient(180deg, #fffdf5, var(--gold-light) 65%, var(--gold));
   animation: node-pulse 1.7s ease-in-out infinite;
 }
 
 @keyframes node-pulse {
-  0%, 100% { box-shadow: 0 5px 0 var(--gold-dark), 0 0 0 5px rgba(255, 201, 60, 0.25); }
-  50%      { box-shadow: 0 5px 0 var(--gold-dark), 0 0 0 14px rgba(255, 201, 60, 0); }
+  0%, 100% {
+    box-shadow: 0 5px 0 var(--gold-dark), 0 0 0 5px rgba(255, 201, 60, 0.3),
+                inset 0 3px 6px rgba(255, 255, 255, 0.7);
+  }
+  50% {
+    box-shadow: 0 5px 0 var(--gold-dark), 0 0 0 17px rgba(255, 201, 60, 0),
+                inset 0 3px 6px rgba(255, 255, 255, 0.7);
+  }
 }
 
+/* Gesperrt: eine kalte Platte, die noch nicht freigelegt ist. */
 .node--locked {
-  background: linear-gradient(180deg, #4d5f8f, #35446c);
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.16), transparent 58%),
+    linear-gradient(180deg, #4d5f8f, #35446c);
   color: rgba(255, 255, 255, 0.4);
   cursor: default;
-  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+  text-shadow: none;
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.28),
+    inset 0 -3px 5px rgba(0, 0, 0, 0.35),
+    inset 0 2px 4px rgba(255, 255, 255, 0.12);
+}
+
+/* Das Uebungslevel ist kein Level, sondern der Einstieg — deshalb tuerkis
+   statt gold. Es steht immer offen und traegt ein Fragezeichen. */
+.node--tutorial {
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.8), transparent 58%),
+    linear-gradient(180deg, #7ff0e0, var(--teal, #38f2d8) 62%, #1c9c8c);
+  color: #05423a;
+  box-shadow:
+    var(--shadow-node),
+    inset 0 -4px 6px rgba(0, 70, 62, 0.4),
+    inset 0 3px 5px rgba(255, 255, 255, 0.6);
+}
+
+.node--tutorial.node--current {
+  animation: node-pulse-teal 1.7s ease-in-out infinite;
+}
+
+@keyframes node-pulse-teal {
+  0%, 100% {
+    box-shadow: 0 5px 0 #14776b, 0 0 0 5px rgba(56, 242, 216, 0.3),
+                inset 0 3px 6px rgba(255, 255, 255, 0.7);
+  }
+  50% {
+    box-shadow: 0 5px 0 #14776b, 0 0 0 17px rgba(56, 242, 216, 0),
+                inset 0 3px 6px rgba(255, 255, 255, 0.7);
+  }
 }
 
 .node__crown {
@@ -559,15 +648,16 @@ body.is-muted .icon-btn__off { display: inline; }
 .goal {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 5px;
+  padding: 4px 12px 4px 5px;
   border-radius: 999px;
   border: 2px solid var(--glass-line);
   background: rgba(0, 0, 0, 0.3);
   transition: border-color 0.25s ease, background 0.25s ease;
 }
 
-.goal__icon { font-size: 17px; line-height: 1; }
+/* Der gezeichnete Stein — dieselbe Form wie auf dem Brett, kein Emoji. */
+.goal__gem { display: block; flex: 0 0 auto; }
 
 .goal__value {
   font-size: 17px;
@@ -581,6 +671,9 @@ body.is-muted .icon-btn__off { display: inline; }
 }
 
 .goal.is-done .goal__value { color: var(--success); }
+
+/* Erledigt: der Stein tritt zurueck, der Haken uebernimmt. */
+.goal.is-done .goal__gem { opacity: 0.55; }
 
 /* -------------------------------------------------------------- Spielfeld */
 
@@ -876,7 +969,7 @@ body.is-arming #board-canvas { cursor: crosshair; }
   background: rgba(86, 217, 123, 0.16);
 }
 
-.goal-card__icon { font-size: 26px; text-align: center; }
+.goal-card__icon { display: grid; place-items: center; }
 .goal-card__text { font-size: 15px; font-weight: 600; }
 
 .goal-card__count {
@@ -917,6 +1010,35 @@ body.is-arming #board-canvas { cursor: crosshair; }
 
 /* Mittlerer Stern etwas hoeher — klassische Dreier-Anordnung. */
 .star:nth-child(2) { margin-top: -10px; font-size: 52px; }
+
+/* Konfetti im Sieg-Popup. Beschneidet sich selbst wie der Lichtkranz, damit
+   das Panel nicht auf `overflow: hidden` muss. */
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  pointer-events: none;
+}
+
+.confetti__bit {
+  position: absolute;
+  top: -14px;
+  width: 8px;
+  height: 13px;
+  border-radius: 2px;
+  opacity: 0;
+  animation-name: confetti-fall;
+  animation-timing-function: cubic-bezier(0.35, 0.1, 0.6, 1);
+  animation-fill-mode: both;
+}
+
+@keyframes confetti-fall {
+  0%   { opacity: 0; transform: translateY(0) rotate(0deg); }
+  12%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { opacity: 0; transform: translateY(460px) rotate(540deg); }
+}
 
 /* Der Lichtkranz beschneidet sich selbst, statt das Panel auf
    `overflow: hidden` zu zwingen — das wuerde das Banner abschneiden. */
@@ -1334,7 +1456,7 @@ kbd {
 /* ------------------------------------------------------------- Kleine Hoehen */
 
 @media (max-height: 720px) {
-  .panel--hero { padding: 28px 22px 22px; }
+  .panel--hero { --pad-t: 28px; --pad-x: 22px; --pad-b: 22px; }
   .tagline { margin-bottom: 20px; }
   .btn { padding: 12px 20px; }
   .btn--big { padding: 14px 22px; font-size: 17px; }
@@ -1343,8 +1465,10 @@ kbd {
 }
 
 @media (max-width: 420px) {
-  .panel { padding: 32px 16px 22px; }
-  .ribbon { font-size: 17px; padding: 8px 20px; }
+  /* Nur die Abstaende, nicht die Kurzform — sonst faellt der Bannerplatz mit
+     weg und das Banner deckt den Inhalt zu. */
+  .panel { --pad-x: 16px; --pad-t: 32px; --pad-b: 22px; }
+  .ribbon { padding: 8px 20px; }
   .moves__value { font-size: 23px; }
   .goal { padding: 5px 9px; }
   .topbar { gap: 7px; padding-left: 10px; padding-right: 10px; }

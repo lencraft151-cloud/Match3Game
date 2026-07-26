@@ -804,10 +804,17 @@
       this.fx.text(center.x, center.y, '+' + Utils.formatNumber(gained), '#ffffff', Math.round(this.cell * 0.42));
     }
 
+    /* Die Kaskade waechst mit: je tiefer die Kette, desto groesser und
+       waermer das Banner. Eine Fuenferkette soll sich anders anfuehlen als
+       eine Zweierkette, nicht nur anders heissen. */
     if (cascadeMult >= 2) {
       var mid = this.cellCenter(this.cols / 2 - 0.5, this.rows / 2 - 0.5);
-      this.fx.text(mid.x, mid.y, comboLabel(cascadeMult), '#38f2d8', Math.round(this.cell * 0.6));
-      this.fx.ring(mid.x, mid.y, this.cell * 3.4, '#38f2d8', 3);
+      var heat = Math.min(1, (cascadeMult - 2) / 3);
+      var hot = heat > 0.66 ? '#ffcc4d' : heat > 0.33 ? '#7ee787' : '#38f2d8';
+      var big = Math.round(this.cell * (0.55 + heat * 0.35));
+
+      this.fx.text(mid.x, mid.y, comboLabel(cascadeMult), hot, big);
+      this.fx.ring(mid.x, mid.y, this.cell * (3.2 + heat * 1.6), hot, 3 + Math.round(heat * 3));
     }
 
     this.addShake(Math.min(14, 3 + cascadeMult * 2.5 + blast.cleared.length * 0.25));
@@ -1468,25 +1475,7 @@
       ctx.shadowColor = Utils.withAlpha(color, 0.55);
     }
 
-    var grad = ctx.createLinearGradient(-radius, -radius, radius, radius);
-    grad.addColorStop(0, lighten(color, 0.45));
-    grad.addColorStop(0.55, color);
-    grad.addColorStop(1, darken(color, 0.35));
-    ctx.fillStyle = grad;
-
-    tracePath(ctx, shape, radius);
-    ctx.fill();
-
-    ctx.shadowBlur = 0;
-
-    /* Glanzlicht oben links — gibt den Steinen Volumen. */
-    ctx.globalAlpha = alpha * 0.5;
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.beginPath();
-    ctx.ellipse(-radius * 0.3, -radius * 0.38, radius * 0.3, radius * 0.19, -0.6, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.globalAlpha = alpha;
+    paintGemBody(ctx, shape, radius, color, alpha);
 
     if (gem.special === SPECIAL.LINE_H || gem.special === SPECIAL.LINE_V) {
       drawLineMarks(ctx, radius, gem.special === SPECIAL.LINE_H);
@@ -1686,6 +1675,98 @@
     }
   }
 
+  /* Der Steinkoerper: Verlauf, Tafelfacette, Innenschatten, Schliffkante und
+     Glanzlicht — in dieser Reihenfolge, sonst liegt der Schliff unter der
+     Facette. Brett und Aufgaben-Symbole malen beide hierueber, ein Stein
+     sieht damit ueberall gleich aus.
+
+     Der Aufrufer hat `globalAlpha` bereits auf `alpha` gesetzt; hier wird es
+     schichtweise verrechnet und am Ende wieder dorthin zurueckgestellt. */
+  function paintGemBody(ctx, shape, r, color, alpha) {
+    var a = alpha === undefined ? 1 : alpha;
+
+    /* Grundkoerper — der Verlauf laeuft schraeg, damit die Kante oben links
+       Licht faengt und die untere rechte im Schatten liegt. */
+    var grad = ctx.createLinearGradient(-r, -r, r * 0.7, r);
+    grad.addColorStop(0, lighten(color, 0.6));
+    grad.addColorStop(0.42, color);
+    grad.addColorStop(1, darken(color, 0.48));
+    ctx.fillStyle = grad;
+    tracePath(ctx, shape, r);
+    ctx.fill();
+
+    /* Ab hier kein Aussenschein mehr, sonst leuchtet jede Innenkante mit. */
+    ctx.shadowBlur = 0;
+
+    /* Innerhalb der Silhouette bleiben: Facette und Schatten duerfen nicht
+       ueber den Rand laufen. */
+    ctx.save();
+    tracePath(ctx, shape, r);
+    ctx.clip();
+
+    /* Tafelfacette — die geschliffene Flaeche, leicht nach oben versetzt. */
+    ctx.globalAlpha = a * 0.42;
+    ctx.fillStyle = lighten(color, 0.75);
+    ctx.save();
+    ctx.translate(0, -r * 0.08);
+    tracePath(ctx, shape, r * 0.58);
+    ctx.fill();
+    ctx.restore();
+
+    /* Innenschatten unten gibt dem Stein Tiefe. */
+    ctx.globalAlpha = a * 0.5;
+    var deep = ctx.createLinearGradient(0, 0, 0, r);
+    deep.addColorStop(0, 'rgba(0,0,0,0)');
+    deep.addColorStop(1, 'rgba(0,0,0,0.6)');
+    ctx.fillStyle = deep;
+    ctx.fillRect(-r, -r, r * 2, r * 2);
+
+    ctx.restore();
+
+    /* Schliffkante — ohne sie verschwimmen zwei gleichfarbige Nachbarn zu
+       einem Fleck. */
+    ctx.globalAlpha = a * 0.9;
+    ctx.strokeStyle = darken(color, 0.55);
+    ctx.lineWidth = Math.max(1, r * 0.085);
+    tracePath(ctx, shape, r);
+    ctx.stroke();
+
+    /* Glanzlicht: ein schmaler Streifen liest sich als Politur, ein breiter
+       Fleck nur als Aufkleber. */
+    ctx.globalAlpha = a * 0.85;
+    ctx.fillStyle = 'rgba(255,255,255,0.92)';
+    ctx.beginPath();
+    ctx.ellipse(-r * 0.32, -r * 0.44, r * 0.27, r * 0.11, -0.66, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.globalAlpha = a;
+  }
+
+  /* Fortschrittsbogen um ein Aufgabensymbol: eine dunkle Spur, darauf der
+     erreichte Anteil in Gold, oben beginnend und im Uhrzeigersinn. */
+  function drawProgressRing(ctx, radius, fraction) {
+    var width = Math.max(2, radius * 0.15);
+
+    ctx.save();
+    ctx.lineCap = 'round';
+
+    ctx.strokeStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.arc(0, 0, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    if (fraction > 0) {
+      ctx.strokeStyle = fraction >= 1 ? '#56d97b' : '#ffcc4d';
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * fraction);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
   function drawLineMarks(ctx, r, horizontal) {
     ctx.save();
     ctx.globalAlpha = 0.95;
@@ -1795,6 +1876,55 @@
   /* Der Startbildschirm zeichnet dieselben Formen im Hintergrund. */
   root.M3.traceGemShape = function (ctx, typeIndex, radius) {
     tracePath(ctx, SHAPES[typeIndex % SHAPES.length], radius);
+  };
+
+  /* Ein einzelnes Steinsymbol in ein kleines Canvas, fuer die Aufgaben in
+     HUD und Popups. Bewusst dieselben Formen, Farben und Verlaeufe wie auf
+     dem Brett: so kann die Aufgabe gar nicht erst etwas anderes zeigen, als
+     dort tatsaechlich liegt.
+
+     `symbol` kommt aus Goals.symbol: { kind: 'gem'|'blocker'|'score', type }.
+     `ring` ist optional ein Anteil 0..1 und zeichnet einen Fortschrittsbogen
+     um den Stein — im HUD sieht man damit auf einen Blick, wie weit die
+     Aufgabe ist, nicht nur wie viel noch fehlt. */
+  root.M3.drawGemSymbol = function (canvas, symbol, size, ring) {
+    var dpr = Math.min(root.devicePixelRatio || 1, 3);
+
+    canvas.width = Math.round(size * dpr);
+    canvas.height = Math.round(size * dpr);
+    canvas.style.width = size + 'px';
+    canvas.style.height = size + 'px';
+
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+
+    var hasRing = typeof ring === 'number';
+    /* Mit Ring rueckt der Stein nur wenig ein — er bleibt die Hauptsache,
+       der Ring ist die Randnotiz. */
+    var r = size * (hasRing ? 0.335 : 0.42);
+
+    ctx.save();
+    ctx.translate(size / 2, size / 2);
+
+    if (hasRing) drawProgressRing(ctx, size * 0.45, Utils.clamp(ring, 0, 1));
+
+    if (symbol.kind === 'blocker') {
+      drawBlocker(ctx, r);
+      ctx.restore();
+      return;
+    }
+
+    /* Punkteaufgaben tragen den goldenen Stern — dieselbe Form wie der
+       Amethyst, nur in Gold, damit sie nicht mit einer Farbe verwechselt
+       wird. */
+    var color = symbol.kind === 'score' ? '#ffcc4d' : COLORS[symbol.type % COLORS.length];
+    var shape = symbol.kind === 'score' ? 'star' : SHAPES[symbol.type % SHAPES.length];
+
+    ctx.shadowBlur = size * 0.16;
+    ctx.shadowColor = Utils.withAlpha(color, 0.7);
+    paintGemBody(ctx, shape, r, color, 1);
+    ctx.restore();
   };
 
 })(typeof globalThis !== 'undefined' ? globalThis : this);

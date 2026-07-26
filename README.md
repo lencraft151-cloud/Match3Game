@@ -38,8 +38,9 @@ du den Hammer wirklich einsetzen — er ist dort wie alle Power-Ups
 **unbegrenzt** und kostet nichts vom Vorrat. Abgeschlossen ist es erst, wenn
 der Text durch ist: eine früh nebenbei erfüllte Aufgabe beendet es nicht.
 
-Darüber liegen die Level als Bahn aus nummerierten Knoten. Zu Beginn ist nur
-Level 1 offen; jedes geschaffte Level schaltet genau eines frei. Das aktuelle trägt eine Krone, geschaffte zeigen ihre Sterne und
+Darüber liegen die Level als Bahn aus nummerierten Knoten. Ganz am Anfang ist
+**nur das Übungslevel** offen — Level 1 geht auf, sobald du es durch hast.
+Danach schaltet jedes geschaffte Level genau eines frei. Das aktuelle trägt eine Krone, geschaffte zeigen ihre Sterne und
 lassen sich für fehlende Sterne wiederholen, der Rest ist gesperrt. Ein Tipp auf den Knoten öffnet die Levelkarte mit Aufgabe und
 Zugzahl.
 
@@ -63,8 +64,12 @@ doppelt aus — in Punkten und in Sternen.
 | Felsen | „8 Felsen zerschlagen" |
 | Punkte | „10.000 Punkte" |
 
-Ein Level stellt eine oder zwei davon. Oben im HUD stehen sie als Marke mit
-Restzahl und werden abgehakt, sobald sie erfüllt sind.
+Ein Level stellt eine oder zwei davon. Oben im HUD stehen sie als Marke: der
+**gezeichnete Stein** mit einem Fortschrittsring drumherum und der Restzahl
+daneben. Das Symbol kommt aus derselben Funktion wie das Spielfeld — die
+Aufgabe kann deshalb gar nicht erst eine andere Form zeigen als die, die
+tatsächlich fällt. (Vorher stand dort ein Emoji: für den Smaragd, der als
+Dreieck fällt, gab es nur einen grünen Kreis.)
 
 Die Zahlen sind bewusst **klein und knapp**: Level 1 verlangt sechs Rubine in
 acht Zügen. Damit zählt jeder einzelne Zug sichtbar, und ein Level ist in
@@ -113,7 +118,9 @@ da — der Countdown bis zum nächsten Herz steht oben auf der Karte.
 
 Gehen dir mitten im Level die Züge aus, kannst du **weiterspielen statt
 aufzugeben**: fünf Extra-Züge gegen Kristalle. Der Preis steigt mit jedem
-Nachkauf im selben Level. Erst wenn du wirklich aufgibst, kostet es ein Leben.
+Nachkauf im selben Level. Erst ein abgebrochener Versuch kostet ein Leben —
+und zwar **beides**, Aufgeben wie Neu starten. Beide Knöpfe im Pausemenü sagen
+das vorher an. Im Übungslevel kostet nichts etwas.
 
 **Kristalle 💎** gibt es für jedes geschaffte Level: Grundbetrag, Zuschlag pro
 Levelstufe und Zuschlag pro Stern.
@@ -194,7 +201,7 @@ späten Leveln unerreichbar.
 ```bash
 node test/board.test.js     # 43 Prüfungen — Spielfeldlogik
 node test/player.test.js    # 57 Prüfungen — Leben, Kristalle, Käufe
-node test/levels.test.js    # 41 Prüfungen — Level, Aufgaben, Übungslevel
+node test/levels.test.js    # 44 Prüfungen — Level, Aufgaben, Übungslevel
 node test/tutorial.test.js  # 35 Prüfungen — Erklärkette im Übungslevel
 ```
 

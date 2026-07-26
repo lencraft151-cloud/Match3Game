@@ -83,10 +83,30 @@
     els.path.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
     els.path.setAttribute('width', width);
     els.path.setAttribute('height', height);
+
+    /* Ein gepflasterter Weg statt einer gepunkteten Linie: eine breite dunkle
+       Bahn, darauf eine hellere Fahrbahn und darueber die Pflastersteine als
+       Strichmuster. Der Teil bis zum Fortschritt liegt in Gold — man sieht
+       auf einen Blick, wie weit man gekommen ist. */
+    var line = points.join(' ');
+    var doneLength = Math.max(0, Math.min(unlocked, count - 1));
+    var donePoints = points.slice(0, doneLength + 1).join(' ');
+
     els.path.innerHTML =
-      '<polyline points="' + points.join(' ') + '" ' +
-      'fill="none" stroke="rgba(255,255,255,0.16)" stroke-width="14" ' +
-      'stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 26" />';
+      '<polyline points="' + line + '" fill="none" stroke="rgba(0,0,0,0.3)" ' +
+        'stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />' +
+      '<polyline points="' + line + '" fill="none" stroke="rgba(255,255,255,0.11)" ' +
+        'stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />' +
+      '<polyline points="' + line + '" fill="none" stroke="rgba(255,255,255,0.16)" ' +
+        'stroke-width="20" stroke-linecap="butt" stroke-dasharray="9 11" />' +
+      (doneLength > 0
+        ? '<polyline points="' + donePoints + '" fill="none" ' +
+          'stroke="rgba(255,201,60,0.5)" stroke-width="20" stroke-linecap="round" ' +
+          'stroke-linejoin="round" />' +
+          '<polyline points="' + donePoints + '" fill="none" ' +
+          'stroke="rgba(255,232,160,0.55)" stroke-width="20" stroke-linecap="butt" ' +
+          'stroke-dasharray="9 11" />'
+        : '');
 
     /* --- Knoten --------------------------------------------------------- */
     var frag = doc.createDocumentFragment();

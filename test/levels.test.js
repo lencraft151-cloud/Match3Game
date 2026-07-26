@@ -247,15 +247,37 @@ section('Beschriftung');
 /* ========================================================================= */
 
 {
+  /* Das Symbol ist kein Emoji mehr, sondern ein Bezeichner, aus dem die
+     Anzeige denselben Stein zeichnet, der auch faellt. Wichtig ist deshalb,
+     dass jede Sammelaufgabe auf eine Farbe zeigt, die es wirklich gibt —
+     sonst zeichnete die Marke einen Stein, der im Level nicht vorkommt. */
+  const KINDS = ['gem', 'blocker', 'score'];
+  const wrong = [];
+
   for (let n = 1; n <= UP_TO; n++) {
     const def = Levels.get(n);
-    const bad = def.goals.find((g) => !Goals.icon(g) || !Goals.label(g));
-    if (bad) {
-      check(`Level ${n} hat Symbol und Text`, false, JSON.stringify(bad));
-      break;
-    }
+    def.goals.forEach((g) => {
+      const sym = Goals.symbol(g);
+      if (!sym || KINDS.indexOf(sym.kind) < 0 || !Goals.label(g)) {
+        wrong.push(`Level ${n}: ${JSON.stringify(sym)}`);
+        return;
+      }
+      if (sym.kind === 'gem' && !(sym.type >= 0 && sym.type < def.colors)) {
+        wrong.push(`Level ${n}: Symbolfarbe ${sym.type} bei ${def.colors} Farben`);
+      }
+    });
   }
-  check('Jede Aufgabe hat Symbol und Text', true);
+
+  check('Jede Aufgabe hat ein zeichenbares Symbol und einen Text',
+    wrong.length === 0, wrong.slice(0, 6).join('\n    '));
+
+  check('Sammelaufgabe zeigt die Farbe der Aufgabe',
+    Goals.symbol(Goals.collect(2, 5)).kind === 'gem' &&
+    Goals.symbol(Goals.collect(2, 5)).type === 2);
+  check('Felsaufgabe zeigt einen Felsen',
+    Goals.symbol(Goals.blockers(4)).kind === 'blocker');
+  check('Punkteaufgabe zeigt den Punktestern',
+    Goals.symbol(Goals.score(5000)).kind === 'score');
 
   check('Sammelaufgabe nennt die Farbe',
     Goals.label(Goals.collect(2, 5)).includes('Smaragd'),

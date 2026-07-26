@@ -47,6 +47,10 @@
     els.goalList = $('goal-list');
     els.hint = $('game-hint');
 
+    /* Pause */
+    els.pauseCosts = Array.prototype.slice.call(
+      doc.querySelectorAll('#screen-pause .btn__cost'));
+
     /* Levelstart */
     els.startLevel = $('start-level');
     els.startGoals = $('start-goals');
@@ -56,6 +60,7 @@
     els.startTutorialNote = $('start-tutorial-note');
 
     /* Gewonnen */
+    els.winConfetti = $('win-confetti');
     els.winStars = $('win-stars');
     els.winScore = $('win-score');
     els.winMoves = $('win-moves');
@@ -280,6 +285,17 @@
     shown = { level: -1, moves: -1, goalKey: '' };
   };
 
+  /* Das Symbol einer Aufgabe als gezeichneter Stein. Es kommt aus derselben
+     Funktion wie das Brett — deshalb kann die Aufgabe nicht mehr eine andere
+     Form zeigen als die, die tatsaechlich faellt. */
+  function goalSymbol(goal, size, ring) {
+    var canvas = doc.createElement('canvas');
+    canvas.className = 'goal__gem';
+    canvas.setAttribute('aria-hidden', 'true');
+    root.M3.drawGemSymbol(canvas, Goals.symbol(goal), size, ring);
+    return canvas;
+  }
+
   /* Kleine Marken im HUD: Symbol, Restzahl, Haken wenn erledigt. */
   function renderGoalChips(target, goals, progress) {
     target.textContent = '';
@@ -291,15 +307,14 @@
       var li = doc.createElement('li');
       li.className = 'goal' + (done ? ' is-done' : '');
 
-      var icon = doc.createElement('span');
-      icon.className = 'goal__icon';
-      icon.textContent = Goals.icon(goal);
-
       var value = doc.createElement('span');
       value.className = 'goal__value';
       value.textContent = done ? '✓' : Goals.remainingOf(goal, progress);
 
-      li.appendChild(icon);
+      /* Der Ring zeigt, wie viel geschafft ist — die Zahl daneben, wie viel
+         noch fehlt. Zusammen beantwortet das beide Fragen auf einen Blick. */
+      li.appendChild(goalSymbol(goal, 34,
+        Goals.currentOf(goal, progress) / goal.count));
       li.appendChild(value);
       li.title = Goals.label(goal);
       target.appendChild(li);
@@ -320,7 +335,7 @@
 
       var icon = doc.createElement('span');
       icon.className = 'goal-card__icon';
-      icon.textContent = Goals.icon(goal);
+      icon.appendChild(goalSymbol(goal, 34));
 
       var text = doc.createElement('span');
       text.className = 'goal-card__text';
@@ -338,6 +353,12 @@
       target.appendChild(li);
     });
   }
+
+  /* Im Uebungslevel kostet weder Neustart noch Aufgeben etwas — dann darf
+     dort auch keine Kostenmarke stehen. */
+  UI.setPauseCosts = function (show) {
+    els.pauseCosts.forEach(function (el) { el.hidden = !show; });
+  };
 
   UI.setHint = function (text, warn) {
     els.hint.textContent = text;
@@ -360,10 +381,44 @@
 
   /* -------------------------------------------------------- Gewonnen */
 
+  /* Zaehlt eine Zahl in rund `ms` hoch. Eine Zahl, die hochlaeuft, fuehlt
+     sich verdient an; dieselbe Zahl, die einfach dasteht, nicht.
+     Bei reduzierter Bewegung steht sie sofort. */
+  function countUp(el, target, ms, format) {
+    /* Ein noch laufender Zaehler auf demselben Feld wird abgeloest — aber nur
+       dieser. Wer hier pauschal alle Zaehler stoppt, loescht dem Nachbarn
+       mitten im Lauf die Zahl weg. */
+    if (el.countTimer) {
+      root.clearInterval(el.countTimer);
+      el.countTimer = 0;
+    }
+
+    var render = format || function (v) { return Utils.formatNumber(v); };
+
+    if (Utils.prefersReducedMotion() || target <= 0) {
+      el.textContent = render(target);
+      return;
+    }
+
+    var started = 0;
+    var step = 1000 / 60;
+
+    el.countTimer = root.setInterval(function () {
+      started += step;
+      var t = Math.min(1, started / ms);
+      /* Am Ende langsamer — das liest sich wie ein Zaehlwerk, das ausrollt. */
+      el.textContent = render(Math.round(target * Utils.easeOutCubic(t)));
+      if (t >= 1) {
+        root.clearInterval(el.countTimer);
+        el.countTimer = 0;
+      }
+    }, step);
+  }
+
   UI.showWin = function (data, crystals) {
-    els.winScore.textContent = Utils.formatNumber(data.levelScore);
+    els.winScore.textContent = '0';
     els.winMoves.textContent = data.movesLeft;
-    els.winCrystals.textContent = '+' + Utils.formatNumber(crystals) + ' 💎';
+    els.winCrystals.textContent = '+0 💎';
 
     els.winStars.textContent = '';
     for (var i = 1; i <= 3; i++) {
@@ -376,7 +431,40 @@
 
     UI.refreshWallet();
     UI.overlay('screen-win', true);
+
+    /* Erst die Sterne poppen lassen, dann die Zahlen — sonst konkurrieren
+       beide um den Blick. */
+    root.setTimeout(function () {
+      countUp(els.winScore, data.levelScore, 900);
+      countUp(els.winCrystals, crystals, 900, function (v) {
+        return '+' + Utils.formatNumber(v) + ' 💎';
+      });
+    }, 260 + data.stars * 150);
+
+    confetti(els.winConfetti, data.stars);
   };
+
+  /* Konfetti aus den Steinfarben — reine Deko, deshalb aria-hidden und bei
+     reduzierter Bewegung gar nicht erst erzeugt. */
+  function confetti(target, stars) {
+    if (!target) return;
+    target.textContent = '';
+    if (Utils.prefersReducedMotion()) return;
+
+    var colors = root.M3.GEM_COLORS;
+    var count = 14 + stars * 8;
+
+    for (var i = 0; i < count; i++) {
+      var bit = doc.createElement('i');
+      bit.className = 'confetti__bit';
+      bit.style.left = (4 + Math.random() * 92) + '%';
+      bit.style.background = colors[i % colors.length];
+      bit.style.animationDelay = (Math.random() * 0.5) + 's';
+      bit.style.animationDuration = (1.5 + Math.random() * 1.1) + 's';
+      bit.style.transform = 'rotate(' + Math.round(Math.random() * 360) + 'deg)';
+      target.appendChild(bit);
+    }
+  }
 
   /* -------------------------------------------------------- Verloren */
 

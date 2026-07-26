@@ -40,20 +40,27 @@
      Der Schluessel traegt bewusst die Version v2: der Fortschritt aelterer
      Staende wird damit nicht uebernommen, jeder faengt wieder bei Level 1 an.
      Kristalle, Leben und Power-Ups haengen an einem eigenen Schluessel und
-     bleiben erhalten. */
+     bleiben erhalten.
+
+     Ein frischer Stand beginnt bei 0 — das ist das Uebungslevel. Level 1 geht
+     erst auf, wenn es durchgespielt ist. Wer schon Fortschritt hat, steht bei
+     1 oder hoeher und merkt davon nichts. */
   var progressState = loadProgress();
 
   function loadProgress() {
     var raw = Utils.storeGet(CONFIG.STORE_PROGRESS, null);
 
     if (raw && typeof raw === 'object') {
+      /* Nicht `|| 1` schreiben: die 0 ist ein gueltiger Stand und wuerde
+         dabei stillschweigend zur 1 werden. */
+      var level = Math.floor(raw.unlocked);
       return {
-        unlocked: Math.max(1, Math.floor(raw.unlocked) || 1),
+        unlocked: isFinite(level) && level >= 0 ? level : 1,
         stars: (raw.stars && typeof raw.stars === 'object') ? raw.stars : {}
       };
     }
 
-    return { unlocked: 1, stars: {} };
+    return { unlocked: 0, stars: {} };
   }
 
   function saveProgress() {
@@ -194,6 +201,14 @@
   /*  Ablauf                                                                */
   /* ====================================================================== */
 
+  /* Von welchem Screen aus wurde die Anleitung geoeffnet? */
+  var helpCameFrom = 'screen-title';
+
+  function openHelp() {
+    helpCameFrom = UI.current() === 'screen-map' ? 'screen-map' : 'screen-title';
+    UI.show('screen-help');
+  }
+
   function openMap(scrollSmooth) {
     UI.closeAllOverlays();
     UI.refreshWallet();
@@ -237,6 +252,7 @@
        sie setzt als Erstes ihre eigene Sperre. */
     UI.setPowerUnlimited(Levels.isTutorial(level));
     UI.setPowerLock(false);
+    UI.setPauseCosts(!Levels.isTutorial(level));
 
     if (Levels.isTutorial(level)) {
       startTutorial();
@@ -341,19 +357,44 @@
     }
   };
 
-  /* Endgueltig aufgeben: jetzt erst kostet es ein Leben. */
-  function giveUpLevel() {
+  /* Ein abgebrochener Versuch kostet ein Leben — egal ob man zur Karte
+     zurueckgeht oder neu startet. Frueher war Neu-starten gratis, damit war
+     Aufgeben immer die duemmere Wahl und die Leben bedeuteten wenig.
+     Im Uebungslevel kostet weiterhin nichts etwas. */
+  function abandonLevel() {
     Tutorial.stop();
 
-    /* Aus dem Uebungslevel darf man jederzeit raus, ohne etwas zu zahlen. */
     if (!Levels.isTutorial(activeLevel)) {
       Player.loseLife();
       UI.pulseHearts();
       Audio.lifeLost();
     }
+  }
 
+  function giveUpLevel() {
+    abandonLevel();
     game.stop();
     openMap();
+  }
+
+  /* Neu starten aus der Pause. */
+  function restartLevel() {
+    var tutorial = Levels.isTutorial(activeLevel);
+
+    /* Das letzte Leben darf nicht in einem Neustart verpuffen, aus dem man
+       dann nicht mehr herauskommt — dann lieber der Shop. */
+    if (!tutorial && Player.snapshot().lives <= 1) {
+      abandonLevel();
+      game.stop();
+      UI.overlay('screen-pause', false);
+      openShop('Das war dein letztes Leben. Ein Extra-Leben kostet ' +
+        CONFIG.PRICE_LIFE + ' Kristalle.');
+      return;
+    }
+
+    abandonLevel();
+    UI.overlay('screen-pause', false);
+    beginLevel(activeLevel);
   }
 
   /* ====================================================================== */
@@ -498,15 +539,19 @@
   function bindButtons() {
     /* --- Titel --- */
     on('btn-start', function () { openMap(); });
-    on('btn-help', function () { UI.show('screen-help'); });
+    on('btn-help', function () { openHelp(); });
+
+    /* Zurueck fuehrt dorthin, wo die Anleitung geoeffnet wurde. Frueher wurde
+       das am Fortschritt geraten — und ein frischer Spieler landete von der
+       Karte aus auf dem Titelbildschirm. */
     on('btn-help-back', function () {
-      UI.show(progressState.unlocked > 1 ? 'screen-map' : 'screen-title');
-      if (UI.current() === 'screen-map') openMap();
+      if (helpCameFrom === 'screen-map') openMap();
+      else UI.show('screen-title');
     });
 
     /* --- Karte --- */
     on('btn-shop', function () { openShop(); });
-    on('btn-map-help', function () { UI.show('screen-help'); });
+    on('btn-map-help', function () { openHelp(); });
     on('btn-scores', function () {
       UI.prepareScoreScreen(lifetimeScore);
       UI.show('screen-scores');
@@ -521,10 +566,7 @@
     on('btn-pause', togglePause);
     on('btn-resume', togglePause);
 
-    on('btn-restart', function () {
-      UI.overlay('screen-pause', false);
-      beginLevel(activeLevel);
-    });
+    on('btn-restart', restartLevel);
 
     /* Mitten im Level zur Karte: gilt als Aufgeben. */
     on('btn-quit', giveUpLevel);
@@ -600,7 +642,10 @@
   function submitScore() {
     UI.setSubmitState('Wird gesendet…');
 
-    Leaderboard.submit(UI.nameValue(), lifetimeScore, progressState.unlocked)
+    /* In der Bestenliste steht das erreichte Level. Wer noch im Uebungslevel
+       steht, hat freigeschaltet 0 — dort waere "Level 0" nur verwirrend. */
+    Leaderboard.submit(UI.nameValue(), lifetimeScore,
+      Math.max(1, progressState.unlocked))
       .then(function (result) {
         UI.lockSubmit();
         UI.highlight(result.entry);

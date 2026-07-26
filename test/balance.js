@@ -151,8 +151,10 @@ for (let n = FROM; n <= TO; n++) {
   const rate = wins / TRIES;
   const avgRest = wins ? (restSum / wins) : 0;
 
+  /* Im Terminal gibt es keine gezeichneten Steine — hier steht der Name der
+     Aufgabe, den Goals.label ohnehin liefert. */
   const desc = def.goals
-    .map((g) => Goals.icon(g) + ' ' + Goals.label(g).split(' ')[0] + ' ' + g.count)
+    .map((g) => Goals.label(g).split(' ')[0] + ' ' + g.count)
     .join(' + ');
 
   const ratios = goalRatios

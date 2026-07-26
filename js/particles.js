@@ -55,7 +55,10 @@
         rot: Math.random() * Math.PI,
         vrot: (Math.random() - 0.5) * 12,
         gravity: 620,
-        shard: Math.random() < 0.45
+        /* Drei Sorten: Scherben (Splitter des Steins), Funkeln (der Glanz
+           eines Schliffs) und schlichte Punkte als Fuellung. */
+        shard: Math.random() < 0.4,
+        glint: Math.random() < 0.22
       });
     }
   };
@@ -186,13 +189,35 @@
       ctx.globalAlpha = 1 - t * t;
       ctx.fillStyle = item.color;
 
-      if (item.shard) {
+      if (item.glint) {
+        /* Vierstrahliges Funkeln — der kurze Lichtblitz eines Schliffs. */
+        ctx.save();
+        ctx.translate(item.x, item.y);
+        ctx.rotate(item.rot);
+        var g = item.size * 2.2 * (1 - t * 0.8);
+        ctx.beginPath();
+        ctx.moveTo(0, -g);
+        ctx.quadraticCurveTo(g * 0.16, -g * 0.16, g, 0);
+        ctx.quadraticCurveTo(g * 0.16, g * 0.16, 0, g);
+        ctx.quadraticCurveTo(-g * 0.16, g * 0.16, -g, 0);
+        ctx.quadraticCurveTo(-g * 0.16, -g * 0.16, 0, -g);
+        ctx.fill();
+        ctx.restore();
+
+      } else if (item.shard) {
+        /* Scherbe statt Balken: ein Splitter hat Kanten. */
         ctx.save();
         ctx.translate(item.x, item.y);
         ctx.rotate(item.rot);
         var s = item.size * (1 - t * 0.55);
-        ctx.fillRect(-s, -s * 0.4, s * 2, s * 0.8);
+        ctx.beginPath();
+        ctx.moveTo(-s, s * 0.55);
+        ctx.lineTo(s * 0.3, -s);
+        ctx.lineTo(s, s * 0.2);
+        ctx.closePath();
+        ctx.fill();
         ctx.restore();
+
       } else {
         ctx.beginPath();
         ctx.arc(item.x, item.y, item.size * (1 - t * 0.7), 0, Math.PI * 2);

@@ -20,16 +20,13 @@
 
   var Goals = {};
 
-  /* Farbnamen und Symbole passend zu den Steinformen aus js/game.js.
-     Reihenfolge und Bedeutung muessen zu COLORS/SHAPES dort passen. */
+  /* Farbnamen passend zu den Steinformen aus js/game.js. Reihenfolge und
+     Bedeutung muessen zu COLORS/SHAPES dort passen. */
   var COLOR_NAMES = [
     'Rubin', 'Bernstein', 'Smaragd', 'Türkis', 'Amethyst', 'Feuer', 'Saphir'
   ];
 
-  var COLOR_ICONS = ['🔴', '🔶', '🟢', '🔷', '⭐', '🟧', '🔵'];
-
   Goals.COLOR_NAMES = COLOR_NAMES;
-  Goals.COLOR_ICONS = COLOR_ICONS;
 
   /* ------------------------------------------------------------ Erzeugen */
 
@@ -47,10 +44,16 @@
 
   /* ------------------------------------------------------------ Anzeige */
 
-  Goals.icon = function (goal) {
-    if (goal.type === 'collect') return COLOR_ICONS[goal.color % COLOR_ICONS.length];
-    if (goal.type === 'blockers') return '🪨';
-    return '⭐';
+  /* Welches Symbol steht fuer diese Aufgabe? Kein Emoji, sondern ein
+     Bezeichner — die Anzeige zeichnet daraus denselben Stein, der auch auf
+     dem Brett liegt. Ein Emoji hat das nie geschafft: fuer den gruenen
+     Smaragd, der als Dreieck faellt, gab es nur einen gruenen Kreis. */
+  Goals.symbol = function (goal) {
+    if (goal.type === 'collect') {
+      return { kind: 'gem', type: goal.color % COLOR_NAMES.length };
+    }
+    if (goal.type === 'blockers') return { kind: 'blocker', type: -1 };
+    return { kind: 'score', type: -1 };
   };
 
   Goals.label = function (goal) {
