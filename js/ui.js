@@ -14,6 +14,10 @@
   var Goals = root.M3.Goals;
   var Leaderboard = root.M3.Leaderboard;
   var Player = root.M3.Player;
+  var Audio = root.M3.Audio;
+  var Icons = root.M3.Icons;
+  var Rooms = root.M3.Rooms;
+  var RoomArt = root.M3.RoomArt;
 
   var doc = root.document;
 
@@ -39,6 +43,7 @@
     els.hearts = $('hearts');
     els.livesNote = $('lives-note');
     els.crystals = $('crystals');
+    els.coins = $('coins');
     els.helpLives = $('help-lives');
 
     /* Spiel-HUD */
@@ -65,6 +70,8 @@
     els.winScore = $('win-score');
     els.winMoves = $('win-moves');
     els.winCrystals = $('win-crystals');
+    els.winCoins = $('win-coins');
+    els.winCoinRow = $('win-coin-row');
 
     /* Verloren */
     els.failGoals = $('fail-goals');
@@ -91,17 +98,23 @@
     els.submitState = $('submit-state');
     els.submitScore = $('submit-score');
 
-    /* Power-Leiste */
-    els.powerButtons = {
-      hammer: $('pw-hammer'),
-      shuffle: $('pw-shuffle'),
-      moves: $('pw-moves')
-    };
-    els.powerCounts = {
-      hammer: $('count-hammer'),
-      shuffle: $('count-shuffle'),
-      moves: $('count-moves')
-    };
+    /* Power-Leiste — aus den Item-Daten gebaut. */
+    buildPowerBar($('powerbar'));
+
+    /* Zimmer */
+    els.roomName = $('room-name');
+    els.roomLead = $('room-lead');
+    els.roomCanvas = $('room-canvas');
+    els.roomCount = $('room-count');
+    els.roomFill = $('room-fill');
+    els.roomProgress = $('room-progress');
+    els.roomTask = $('room-task');
+    els.roomQuestion = $('room-question');
+    els.roomOptions = $('room-options');
+    els.roomDone = $('room-done');
+    els.roomState = $('room-state');
+    els.btnRoomPrev = $('btn-room-prev');
+    els.btnRoomNext = $('btn-room-next');
 
     els.continueMoves.textContent = CONFIG.CONTINUE_MOVES;
     els.helpLives.textContent = CONFIG.MAX_LIVES;
@@ -174,6 +187,7 @@
 
     renderHearts(els.hearts, p.lives, p.maxLives);
     els.crystals.textContent = Utils.formatNumber(p.crystals);
+    els.coins.textContent = Utils.formatNumber(p.coins);
 
     if (p.lives >= p.maxLives) {
       els.livesNote.textContent = 'Voll';
@@ -193,6 +207,50 @@
   };
 
   /* -------------------------------------------------------- Power-Leiste */
+
+  /* Baut die Karten aus Player.ITEMS. Name, Wirkung, Preis und Symbol stehen
+     damit an genau einer Stelle — frueher standen sie zusaetzlich im HTML und
+     liefen bei jeder Aenderung auseinander. */
+  function buildPowerBar(bar) {
+    els.powerButtons = {};
+    els.powerCounts = {};
+    bar.textContent = '';
+
+    Player.ITEM_KEYS.forEach(function (key) {
+      var item = Player.ITEMS[key];
+
+      var button = doc.createElement('button');
+      button.type = 'button';
+      button.id = 'pw-' + key;
+      button.className = 'power power--' + key;
+
+      var badge = doc.createElement('span');
+      badge.className = 'power__badge';
+      badge.appendChild(Icons.element(item.art, 30, 'power__art'));
+
+      var name = doc.createElement('span');
+      name.className = 'power__name';
+      name.textContent = item.short || item.name;
+
+      var effect = doc.createElement('span');
+      effect.className = 'power__effect';
+      effect.textContent = item.effect;
+
+      var count = doc.createElement('span');
+      count.className = 'power__count';
+      count.id = 'count-' + key;
+      count.textContent = '0';
+
+      button.appendChild(badge);
+      button.appendChild(name);
+      button.appendChild(effect);
+      button.appendChild(count);
+      bar.appendChild(button);
+
+      els.powerButtons[key] = button;
+      els.powerCounts[key] = count;
+    });
+  }
 
   /* Leere Power-Ups werden ausgegraut, bleiben aber anklickbar: nur so kann
      das Spiel erklaeren, dass der Vorrat alle ist und was Nachschub kostet.
@@ -360,6 +418,15 @@
     els.pauseCosts.forEach(function (el) { el.hidden = !show; });
   };
 
+  /* Der Rahmen des Bretts nimmt den Ton des Themas auf. Nur eine Variable —
+       gezeichnet wird das Thema selbst in game.js. */
+  UI.setBoardTheme = function (theme) {
+    var canvas = $('board-canvas');
+    if (!canvas || !theme) return;
+    canvas.style.setProperty('--board-tint', 'rgba(' + theme.tint + ', 0.3)');
+    canvas.dataset.theme = theme.key;
+  };
+
   UI.setHint = function (text, warn) {
     els.hint.textContent = text;
     els.hint.classList.toggle('is-warn', !!warn);
@@ -415,10 +482,15 @@
     }, step);
   }
 
-  UI.showWin = function (data, crystals) {
+  UI.showWin = function (data, crystals, coins) {
     els.winScore.textContent = '0';
     els.winMoves.textContent = data.movesLeft;
     els.winCrystals.textContent = '+0 💎';
+
+    /* Die Muenzzeile steht nur da, wenn es welche gab — im Uebungslevel
+       gibt es keine, und eine Zeile mit "+0" waere dort nur verwirrend. */
+    els.winCoinRow.hidden = !coins;
+    els.winCoins.textContent = '+0';
 
     els.winStars.textContent = '';
     for (var i = 1; i <= 3; i++) {
@@ -439,6 +511,11 @@
       countUp(els.winCrystals, crystals, 900, function (v) {
         return '+' + Utils.formatNumber(v) + ' 💎';
       });
+      if (coins) {
+        countUp(els.winCoins, coins, 900, function (v) {
+          return '+' + Utils.formatNumber(v);
+        });
+      }
     }, 260 + data.stars * 150);
 
     confetti(els.winConfetti, data.stars);
@@ -486,6 +563,141 @@
     els.continueState.className = 'continue__state' + (kind ? ' is-' + kind : '');
   };
 
+  /* -------------------------------------------------------------- Zimmer */
+
+  /* Welches Zimmer gerade angesehen wird. Nicht dasselbe wie das Zimmer, an
+     dem gearbeitet wird — man darf zurueckblaettern und sich Fertiges
+     ansehen. */
+  var roomView = 0;
+
+  /* main.js reicht den Stand und den Kaufhandler herein; ui.js kennt weder
+     den Spielstand noch das Speichern. */
+  var roomApi = null;
+
+  UI.initRooms = function (api) {
+    roomApi = api;
+    els.btnRoomPrev.addEventListener('click', function () { stepRoom(-1); });
+    els.btnRoomNext.addEventListener('click', function () { stepRoom(1); });
+  };
+
+  function stepRoom(delta) {
+    var state = roomApi.state();
+    var next = roomView + delta;
+    if (next < 0 || next >= Rooms.COUNT) return;
+    if (!Rooms.isUnlocked(state, next)) return;
+
+    roomView = next;
+    Audio.click();
+    UI.renderRooms();
+  }
+
+  /* Beim Oeffnen immer beim aktuellen Zimmer landen. */
+  UI.openRoomView = function () {
+    roomView = Rooms.activeIndex(roomApi.state());
+    UI.renderRooms();
+  };
+
+  UI.renderRooms = function () {
+    var state = roomApi.state();
+    var room = Rooms.get(roomView);
+    if (!room) return;
+
+    var chosen = Rooms.chosenIn(state, room.key);
+    var done = Rooms.doneCount(state, room);
+    var total = room.tasks.length;
+
+    els.roomName.textContent = room.name;
+    els.roomLead.textContent = room.lead;
+    els.roomCount.textContent = (roomView + 1) + ' / ' + Rooms.COUNT;
+
+    els.btnRoomPrev.disabled = roomView === 0;
+    els.btnRoomNext.disabled = roomView >= Rooms.COUNT - 1 ||
+      !Rooms.isUnlocked(state, roomView + 1);
+
+    els.roomFill.style.width = Math.round((done / total) * 100) + '%';
+    els.roomProgress.textContent = done + ' von ' + total;
+
+    drawRoom(room, chosen);
+
+    var task = Rooms.nextTask(state, room);
+    els.roomTask.hidden = !task;
+    els.roomDone.hidden = !!task;
+
+    if (task) renderRoomTask(room, chosen, task);
+    else {
+      els.roomDone.textContent = roomView >= Rooms.COUNT - 1
+        ? 'Alles eingerichtet. Das ganze Schloss gehört dir!'
+        : 'Dieses Zimmer ist fertig — das nächste steht bereit.';
+    }
+
+    UI.refreshWallet();
+  };
+
+  /* Das Zimmerbild bekommt die Breite, die der Kasten gerade hergibt, und ein
+     festes Seitenverhaeltnis. Ohne das waere es auf dem Handy briefmarken-
+     gross und auf dem Desktop ein Wandgemaelde. */
+  function drawRoom(room, chosen) {
+    var box = els.roomCanvas.parentNode;
+    var width = Math.max(240, box.clientWidth || 320);
+    var height = Math.round(width * 0.62);
+
+    RoomArt.draw(els.roomCanvas, room, chosen, width, height);
+  }
+
+  function renderRoomTask(room, chosen, task) {
+    var coins = Player.snapshot().coins;
+
+    els.roomQuestion.textContent = task.question;
+    els.roomOptions.textContent = '';
+
+    task.options.forEach(function (option) {
+      var affordable = coins >= option.price;
+
+      var li = doc.createElement('li');
+      var button = doc.createElement('button');
+      button.type = 'button';
+      button.className = 'room-option' + (affordable ? '' : ' is-poor');
+      button.dataset.task = task.key;
+      button.dataset.option = option.key;
+
+      var canvas = doc.createElement('canvas');
+      canvas.className = 'room-option__art';
+      canvas.setAttribute('aria-hidden', 'true');
+      RoomArt.drawOption(canvas, room, chosen, task.key, option.key, 132, 82);
+
+      var name = doc.createElement('span');
+      name.className = 'room-option__name';
+      name.textContent = option.name;
+
+      var price = doc.createElement('span');
+      price.className = 'room-option__price';
+      price.textContent = Utils.formatNumber(option.price);
+
+      button.appendChild(canvas);
+      button.appendChild(name);
+      button.appendChild(price);
+      button.addEventListener('click', function () {
+        roomApi.buy(room.key, task.key, option.key, option.price);
+      });
+
+      li.appendChild(button);
+      els.roomOptions.appendChild(li);
+    });
+  }
+
+  UI.setRoomState = function (text, kind) {
+    els.roomState.textContent = text || '';
+    els.roomState.className = 'room__state' + (kind ? ' is-' + kind : '');
+  };
+
+  /* Beim Kauf kurz aufleuchten — die Muenzen sollen sichtbar irgendwo
+     hingegangen sein. */
+  UI.flashRoom = function () {
+    els.roomCanvas.classList.remove('is-fresh');
+    void els.roomCanvas.offsetWidth;
+    els.roomCanvas.classList.add('is-fresh');
+  };
+
   /* ---------------------------------------------------------------- Shop */
 
   UI.renderShop = function () {
@@ -504,18 +716,22 @@
       action: 'life'
     }));
 
-    Player.ITEM_KEYS.forEach(function (key) {
-      var item = Player.ITEMS[key];
-      els.shopList.appendChild(shopRow({
-        icon: item.icon,
-        name: item.name,
-        desc: item.hint,
-        owned: 'Vorrat: ' + p.powerups[key],
-        price: item.price,
-        affordable: p.crystals >= item.price,
-        action: key
-      }));
-    });
+    /* Der Reihe nach vom guenstigsten zum teuersten — so liest sich die
+       Preisleiter von selbst. */
+    Player.ITEM_KEYS.slice()
+      .sort(function (a, b) { return Player.ITEMS[a].price - Player.ITEMS[b].price; })
+      .forEach(function (key) {
+        var item = Player.ITEMS[key];
+        els.shopList.appendChild(shopRow({
+          art: item.art,
+          name: item.name,
+          desc: item.hint,
+          owned: 'Vorrat: ' + p.powerups[key],
+          price: item.price,
+          affordable: p.crystals >= item.price,
+          action: key
+        }));
+      });
   };
 
   function shopRow(spec) {
@@ -524,7 +740,8 @@
 
     var icon = doc.createElement('span');
     icon.className = 'shop__icon';
-    icon.textContent = spec.icon;
+    if (spec.art) icon.appendChild(Icons.element(spec.art, 34, 'shop__art'));
+    else icon.textContent = spec.icon;
 
     var name = doc.createElement('span');
     name.className = 'shop__name';

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Der Fensterhintergrund traegt dieselbe Farbe wie das Spiel. Ohne das
+       blitzt beim Start kurz ein weisses Fenster auf, bevor der WebView
+       zeichnet — der klassische Weissblitz, der eine App billig aussehen
+       laesst. -->
+  <color name="royal_deep">#FF0A1A4D</color>
+  <color name="royal_bar">#FF12296B</color>
+
+  <style name="GemTheme" parent="@android:style/Theme.NoTitleBar.Fullscreen">
+    <item name="android:windowBackground">@color/royal_deep</item>
+    <item name="android:colorBackground">@color/royal_deep</item>
+    <item name="android:statusBarColor">@color/royal_bar</item>
+    <item name="android:navigationBarColor">@color/royal_deep</item>
+    <item name="android:windowAnimationStyle">@null</item>
+  </style>
+</resources>

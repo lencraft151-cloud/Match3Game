@@ -230,7 +230,7 @@ section('Nur das Verlangte geht');
 
   const powerGuide = api.guides.find((g) => g.mode === 'power');
   check('Der Power-Schritt reicht sein Power-Up durch',
-    !!powerGuide && powerGuide.item === 'hammer',
+    !!powerGuide && powerGuide.item === 'bomb',
     powerGuide ? String(powerGuide.item) : 'fehlt');
 
   Tutorial.stop();

@@ -78,10 +78,10 @@
     {
       wait: 'power',
       guide: 'power',
-      item: 'hammer',
-      text: 'Unter dem Brett liegen deine <b>Power-Ups</b>. Tippe den ' +
-            '<b>🔨 Hammer</b> an und dann einen Stein: das Kreuz drumherum ' +
-            'fliegt mit. Power-Ups kosten keinen Zug — und hier sind sie ' +
+      item: 'bomb',
+      text: 'Unter dem Brett liegen deine <b>Booster</b>. Tippe die ' +
+            '<b>Bombe</b> an und dann einen Stein: das ganze Feld drumherum ' +
+            'fliegt mit. Booster kosten keinen Zug — und hier sind sie ' +
             '<b>unbegrenzt</b>.'
     },
     {

@@ -91,6 +91,92 @@ body {
 
 /* ------------------------------------------------------------------ Screens */
 
+/* ---------------------------------------------------------------- Ladebild */
+
+/* Es liegt ueber allem, bis das Spiel bereit ist. Der Verlauf ist derselbe
+   wie der Seitenhintergrund, damit der Uebergang nicht blitzt. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 22px;
+  background: radial-gradient(circle at 50% 34%, var(--royal-600), var(--royal-900) 72%);
+  transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+}
+
+.splash.is-gone { opacity: 0; visibility: hidden; }
+
+/* Sechs Steine kreisen um die Mitte — dieselben Farben wie auf dem Brett. */
+.splash__ring {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  animation: splash-spin 2.6s linear infinite;
+}
+
+.splash__gem {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border-radius: 6px;
+  animation: splash-bob 1.3s ease-in-out infinite;
+}
+
+.splash__gem--1 { transform: rotate(0deg)   translateY(-44px); background: #ff4f7b; animation-delay: 0s; }
+.splash__gem--2 { transform: rotate(60deg)  translateY(-44px); background: #ffcc4d; animation-delay: 0.11s; }
+.splash__gem--3 { transform: rotate(120deg) translateY(-44px); background: #7ee787; animation-delay: 0.22s; }
+.splash__gem--4 { transform: rotate(180deg) translateY(-44px); background: #38f2d8; animation-delay: 0.33s; }
+.splash__gem--5 { transform: rotate(240deg) translateY(-44px); background: #b36bff; animation-delay: 0.44s; }
+.splash__gem--6 { transform: rotate(300deg) translateY(-44px); background: #5b8cff; animation-delay: 0.55s; }
+
+@keyframes splash-spin { to { transform: rotate(360deg); } }
+
+@keyframes splash-bob {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+
+.splash__title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--gold);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.splash__bar {
+  width: 168px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+}
+
+/* Der Balken behauptet keinen echten Fortschritt — er zeigt, dass etwas
+   passiert. Ein gefaelschter Prozentwert waere schlechter als keiner. */
+.splash__fill {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--gold-dark), var(--gold-light));
+  animation: splash-sweep 1.1s ease-in-out infinite;
+}
+
+@keyframes splash-sweep {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(348%); }
+}
+
+/* ----------------------------------------------------------------- Screens */
+
 .screen {
   position: fixed;
   inset: 0;
@@ -102,25 +188,33 @@ body {
 
   opacity: 0;
   visibility: hidden;
-  transform: scale(0.97);
-  transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
-              visibility 0s linear 0.28s;
+  /* Leicht zurueckgesetzt und angehoben: der neue Screen kommt nach vorn,
+     der alte faellt zurueck. Das liest sich als Tiefe, nicht als Schnitt. */
+  transform: scale(0.94) translateY(12px);
+  transition: opacity 0.3s ease,
+              transform 0.42s cubic-bezier(0.22, 1.1, 0.36, 1),
+              visibility 0s linear 0.42s;
 }
 
 .screen.is-active {
   opacity: 1;
   visibility: visible;
-  transform: scale(1);
+  transform: none;
   transition-delay: 0s;
 }
 
-/* Overlays verdunkeln, was darunter liegt, statt es zu ersetzen. */
+/* Overlays verdunkeln, was darunter liegt, statt es zu ersetzen. Sie kommen
+   von unten hoch statt aus der Tiefe — so unterscheidet sich ein Popup
+   spuerbar von einem Screenwechsel. */
 .screen--overlay {
   background: rgba(5, 12, 40, 0.74);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   z-index: 5;
+  transform: translateY(26px);
 }
+
+.screen--overlay.is-active { transform: none; }
 
 /* Karte fuellt den Bildschirm ohne Panel. */
 .screen--plain {
@@ -308,6 +402,14 @@ body {
 
 .btn--big { padding: 17px 26px; font-size: 19px; }
 
+/* Ein Link, der wie ein Knopf aussieht, muss sich auch wie einer verhalten:
+   volle Breite, mittig, ohne Unterstreichung. */
+a.btn {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+}
+
 .btn--quiet {
   background: transparent;
   box-shadow: none;
@@ -368,6 +470,10 @@ body.is-muted .icon-btn__off { display: inline; }
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   z-index: 3;
+  /* Zwei Anzeigen und vier Knoepfe passen auf 360 px nur, wenn die Anzeigen
+     nachgeben duerfen. Ohne das schiebt die Leiste die aeusseren Knoepfe aus
+     dem Bild — die waeren dann unerreichbar. */
+  min-width: 0;
 }
 
 .topbar__stat {
@@ -378,6 +484,9 @@ body.is-muted .icon-btn__off { display: inline; }
   border-radius: 999px;
   border: 2px solid var(--glass-line);
   background: rgba(0, 0, 0, 0.3);
+  min-width: 0;
+  flex-shrink: 1;
+  white-space: nowrap;
 }
 
 .topbar__stat--coins strong {
@@ -395,6 +504,9 @@ body.is-muted .icon-btn__off { display: inline; }
 
 .topbar__actions {
   margin-left: auto;
+  /* Die Knoepfe geben nie nach — lieber ruecken die Anzeigen zusammen, als
+     dass ein Knopf aus dem Bild faellt. */
+  flex: 0 0 auto;
   display: flex;
   gap: 7px;
 }
@@ -690,8 +802,11 @@ body.is-muted .icon-btn__off { display: inline; }
   touch-action: none;
   cursor: pointer;
   background: rgba(6, 14, 48, 0.55);
-  border: 3px solid rgba(255, 255, 255, 0.14);
+  /* Der Rahmen nimmt den Ton des Level-Themas auf; ohne Thema bleibt es beim
+     neutralen Weiss. */
+  border: 3px solid var(--board-tint, rgba(255, 255, 255, 0.14));
   box-shadow: var(--shadow-lift), inset 0 0 60px rgba(0, 0, 0, 0.35);
+  transition: border-color 0.6s ease;
 }
 
 #board-canvas:focus-visible { outline: 3px solid var(--gold); outline-offset: 4px; }
@@ -718,8 +833,8 @@ body.is-muted .icon-btn__off { display: inline; }
   flex: 0 0 auto;
   width: min(560px, 100%);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
 
 /* Jedes Power-Up ist eine eigene Karte mit eigener Akzentfarbe — so lassen
@@ -745,9 +860,10 @@ body.is-muted .icon-btn__off { display: inline; }
   transition: transform 0.1s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
-.power--hammer  { --accent: #ffb03a; }
-.power--shuffle { --accent: #56d97b; }
-.power--moves   { --accent: #56b8ff; }
+.power--rocket  { --accent: #56b8ff; }
+.power--bomb    { --accent: #ff8a5c; }
+.power--moves   { --accent: #7ee787; }
+.power--shuffle { --accent: #c99bff; }
 
 .power:hover:not(.is-empty) {
   border-color: var(--accent);
@@ -760,20 +876,25 @@ body.is-muted .icon-btn__off { display: inline; }
   margin-bottom: 3px;
 }
 
-/* Symbol in einem runden Abzeichen in der Akzentfarbe. */
+/* Das gezeichnete Symbol sitzt in einer dunklen Mulde in der Akzentfarbe —
+   dunkel, weil Rakete und Bombe helle Flaechen haben und auf hellem Grund
+   verschwinden wuerden. */
 .power__badge {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at 35% 30%,
-    color-mix(in srgb, var(--accent) 70%, white),
-    var(--accent));
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.3), inset 0 -2px 4px rgba(0, 0, 0, 0.25);
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.28), transparent 62%),
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--accent) 40%, #0b1740),
+      color-mix(in srgb, var(--accent) 12%, #0b1740));
+  border: 2px solid color-mix(in srgb, var(--accent) 62%, transparent);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.32), inset 0 -2px 5px rgba(0, 0, 0, 0.4);
 }
 
-.power__icon { font-size: 19px; line-height: 1; }
+.power__art { display: block; }
 
 .power__name {
   font-size: 12px;
@@ -785,6 +906,8 @@ body.is-muted .icon-btn__off { display: inline; }
   font-size: 10px;
   color: var(--ink-faint);
   letter-spacing: 0.2px;
+  text-align: center;
+  line-height: 1.2;
 }
 
 .power__count {
@@ -1177,7 +1300,191 @@ body.is-arming #board-canvas { cursor: crosshair; }
 
 .shop__row--affordable { border-color: rgba(255, 201, 60, 0.35); }
 
-.shop__icon { font-size: 26px; text-align: center; }
+.shop__icon { font-size: 26px; display: grid; place-items: center; }
+.shop__art { display: block; }
+
+/* ------------------------------------------------------------------ Zimmer */
+
+.panel--rooms { text-align: center; }
+
+.room__stage {
+  position: relative;
+  margin: 4px 0 12px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 3px solid var(--gold-dark);
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.5), 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.room__canvas { display: block; width: 100%; }
+
+/* Nach einem Kauf blitzt das Bild kurz auf — die Muenzen sollen sichtbar
+   irgendwo hingegangen sein. */
+.room__canvas.is-fresh { animation: room-flash 0.6s ease-out; }
+
+@keyframes room-flash {
+  0%   { filter: brightness(2.1) saturate(1.4); }
+  100% { filter: none; }
+}
+
+.room__nav {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.room__nav .icon-btn {
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+  background: rgba(6, 14, 48, 0.75);
+}
+
+.room__nav .icon-btn:disabled { opacity: 0.3; cursor: default; }
+
+.room__count {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(6, 14, 48, 0.75);
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Fortschritt des Zimmers. */
+.room__bar {
+  position: relative;
+  height: 22px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  border: 2px solid var(--glass-line);
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.room__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0;
+  background: linear-gradient(90deg, var(--gold-dark), var(--gold-light));
+  transition: width 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.room__progress {
+  position: relative;
+  display: block;
+  line-height: 18px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #23180a;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.room__question {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.room__options {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.room-option {
+  width: 100%;
+  appearance: none;
+  border: 2px solid var(--glass-line);
+  border-bottom-width: 5px;
+  border-bottom-color: rgba(0, 0, 0, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--ink);
+  font-family: inherit;
+  padding: 8px 8px 10px;
+  cursor: pointer;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  transition: transform 0.1s ease, border-color 0.2s ease;
+}
+
+.room-option:hover { border-color: var(--gold); }
+
+.room-option:active {
+  transform: translateY(3px);
+  border-bottom-width: 2px;
+  margin-bottom: 3px;
+}
+
+.room-option__art {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+}
+
+.room-option__name { font-size: 13px; font-weight: 700; }
+
+.room-option__price {
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  color: #4a2f00;
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Zu teuer: sichtbar, aber weiterhin anklickbar — der Klick sagt, wie viel
+   noch fehlt. Ein toter Knopf sagt gar nichts. */
+.room-option.is-poor { opacity: 0.55; }
+.room-option.is-poor .room-option__price {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--ink-dim);
+}
+
+.room__done {
+  margin: 4px 0 12px;
+  font-size: 14px;
+  color: var(--gold);
+  font-weight: 700;
+}
+
+.room__state {
+  min-height: 18px;
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--ink-faint);
+}
+
+.room__state.is-ok { color: var(--success); }
+.room__state.is-warn { color: var(--gold); }
+
+/* Die goldene Muenze im Kopf — Kristalle sind blau, Muenzen sind gold, damit
+   man auf einen Blick sieht, welcher Topf gemeint ist. */
+.coin--gold {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: -2px;
+  background: radial-gradient(circle at 35% 30%, #fff2c0, var(--gold) 55%, var(--gold-dark));
+  box-shadow: inset 0 -2px 3px rgba(120, 68, 0, 0.55), 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.topbar__stat--gold strong { color: var(--gold-light); }
+
+.tally__row--coins dd { color: var(--gold-light); }
 .shop__name { font-weight: 700; font-size: 15px; }
 
 .shop__desc {
@@ -1453,6 +1760,22 @@ kbd {
   font-size: 12px;
 }
 
+/* Zwei Anzeigen und vier Knoepfe sind viel fuer eine Handy-Kopfzeile. Ab hier
+   tritt die Herz-Restzeit zurueck und alles rueckt zusammen — abgeschnittener
+   Text waere die schlechtere Loesung als ein Wert, der eben nicht dasteht.
+   Die Grenze liegt bei 520 statt 420: gemessen laeuft die Leiste schon bei
+   430 px ueber. */
+@media (max-width: 520px) {
+  .topbar { gap: 5px; padding-left: 8px; padding-right: 8px; }
+  .topbar__stat { padding: 5px 9px; gap: 5px; }
+  .topbar__sub { display: none; }
+  .topbar__actions { gap: 4px; }
+  .icon-btn { width: 34px; height: 34px; font-size: 14px; }
+  .hearts { font-size: 13px; letter-spacing: 0; }
+  .topbar__stat--coins strong,
+  .topbar__stat--gold strong { font-size: 15px; }
+}
+
 /* ------------------------------------------------------------- Kleine Hoehen */
 
 @media (max-height: 720px) {
@@ -1471,9 +1794,8 @@ kbd {
   .ribbon { padding: 8px 20px; }
   .moves__value { font-size: 23px; }
   .goal { padding: 5px 9px; }
-  .topbar { gap: 7px; padding-left: 10px; padding-right: 10px; }
-  .topbar__stat { padding: 6px 10px; }
-  .icon-btn { width: 38px; height: 38px; font-size: 15px; }
+  .moves__value { font-size: 23px; }
+  .goal { padding: 4px 10px 4px 4px; }
 }
 
 /* --------------------------------------------------- Reduzierte Bewegung */

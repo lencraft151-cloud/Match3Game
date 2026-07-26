@@ -1,13 +1,39 @@
 # Gem Cascade
 
-Ein Match-3-Spiel im Browser mit Level-Landkarte, Aufgaben statt Punktejagd,
-Sternewertung, Leben, Kristallen und Power-Ups — plus optionaler weltweiter
-Bestenliste.
+Ein Match-3-Spiel mit Level-Landkarte, Aufgaben statt Punktejagd,
+Sternewertung, Leben, Boostern und einem Schloss zum Einrichten — plus
+optionaler weltweiter Bestenliste.
 
-Kein Build, keine Abhängigkeiten, keine Assets — reines HTML, CSS und
-JavaScript. `index.html` im Browser öffnen genügt.
+Kein Build, keine Abhängigkeiten, keine Bilddateien — reines HTML, CSS und
+JavaScript. Jedes Symbol im Spiel ist gezeichnet, nicht geladen.
+`index.html` im Browser öffnen genügt.
 
 **Spielen:** https://lencraft151-cloud.github.io/Match3Game/
+
+## Als App installieren
+
+**[Download-Seite →](https://lencraft151-cloud.github.io/Match3Game/download/)**
+
+| Gerät | Weg | Hinweis |
+|---|---|---|
+| Android | [`GemCascade.apk`](download/) | Bringt das Spiel mit, läuft **offline**, **keine Berechtigungen** |
+| iPhone/iPad | [`GemCascade.mobileconfig`](download/) | Legt ein Symbol auf den Home-Bildschirm |
+| iPhone/iPad | Safari → Teilen → „Zum Home-Bildschirm" | Braucht gar kein Profil |
+| Desktop | Installieren-Symbol in der Adressleiste | PWA, funktioniert ebenfalls offline |
+
+Zwei Dinge vorweg, damit die Warnungen niemanden überraschen: Das APK ist
+mit einem **eigenen Schlüssel signiert** und nicht über den Play Store
+verteilt — Android warnt deshalb vor „unbekannten Quellen", so wie bei jeder
+App außerhalb des Stores. Das iOS-Profil ist **unsigniert** und wird als
+„Nicht verifiziert" angezeigt; es enthält ausschließlich einen Web Clip, also
+ein Symbol, das das Spiel im Vollbild öffnet — keine Zertifikate, keine
+Zugriffsrechte. Für Store-Pakete bräuchte es kostenpflichtige
+Entwicklerkonten.
+
+Das APK wird von [`android/build.sh`](android/build.sh) erzeugt: `aapt2`,
+`javac`, `d8`, `zipalign` und `apksigner` direkt, ohne Gradle. Für eine App
+aus einer einzigen Activity ohne Abhängigkeiten sind das sieben
+nachvollziehbare Schritte statt eines halben Build-Systems.
 
 ## Lokal starten
 
@@ -34,7 +60,7 @@ Das Übungslevel **führt**, statt nur nebenher zu erklären. Neun Schritte, und
 in jedem geht genau das, was der Text gerade verlangt: beim Lesen liegt ein
 Schleier über dem Brett, beim Tauschen leuchtet **ein bestimmtes Paar** und
 alles andere federt mit einer Begründung zurück, beim Power-Up-Schritt musst
-du den Hammer wirklich einsetzen — er ist dort wie alle Power-Ups
+du die Bombe wirklich einsetzen — sie ist dort wie alle Booster
 **unbegrenzt** und kostet nichts vom Vorrat. Abgeschlossen ist es erst, wenn
 der Text durch ist: eine früh nebenbei erfüllte Aufgabe beendet es nicht.
 
@@ -110,7 +136,7 @@ mischt sich das Feld sichtbar neu.
 | Leertaste / Enter | Auswählen, dann mit einer Pfeiltaste tauschen |
 | `P` oder `Esc` | Pause |
 
-## Leben, Kristalle, Power-Ups
+## Leben, Kristalle, Booster
 
 Du hast **fünf Leben**. Ein verlorenes Level kostet eines. Alle **30 Minuten**
 wächst eines nach (bis fünf), und um **Mitternacht** sind ohnehin alle wieder
@@ -129,16 +155,39 @@ Im **Shop** wird daraus Nachschub:
 
 | Posten | Preis | Wirkung |
 |---|---|---|
-| 🔀 Mischen | 60 💎 | Würfelt das Feld neu und sorgt für mindestens 4 mögliche Züge |
-| 🔨 Hammer | 80 💎 | Räumt ein **Kreuz**: das angetippte Feld und seine vier Nachbarn, Felsen inklusive |
-| ➕ Extra-Züge | 100 💎 | Legt 7 Züge drauf |
-| ❤️ Extra-Leben | 130 💎 | Ein zusätzliches Leben, maximal 10 gleichzeitig |
+| Rakete | 45 💎 | Fegt eine ganze **Reihe oder Spalte** leer |
+| Bombe | 70 💎 | Sprengt **3 × 3**: das angetippte Feld und alle acht Nachbarn, Felsen inklusive |
+| Extra-Züge | 90 💎 | Legt 7 Züge drauf |
+| Mischen | 140 💎 | Würfelt das Feld neu und sorgt für mindestens 4 mögliche Züge |
+| Extra-Leben | 170 💎 | Ein zusätzliches Leben, maximal 10 gleichzeitig |
 
-Die drei Power-Ups liegen als Leiste unter dem Brett und **kosten selbst
-keinen Zug**. Der Hammer braucht ein Ziel: erst antippen, dann das Feld
-wählen — ein zweiter Tipp auf den Knopf entschärft ihn wieder. Ist ein
-Vorrat leer, bleibt der Knopf antippbar und sagt dir unter dem Brett, was
-Nachschub kostet.
+Die Leiter richtet sich danach, wie viel ein Posten wirklich rettet, nicht
+danach, wie stark er aussieht. Eine Rakete räumt schön auf, ist aber
+ersetzbar. **Mischen** holt dich aus einer Sackgasse, in der sonst gar nichts
+mehr geht — das ist der Posten, der ein Level rettet, und deshalb der teuerste
+Booster. Darüber liegt nur noch das **Leben** selbst.
+
+Die vier Booster liegen als Leiste unter dem Brett und **kosten selbst keinen
+Zug**. Rakete und Bombe brauchen ein Ziel: erst antippen, dann das Feld wählen
+— ein zweiter Tipp auf den Knopf entschärft sie wieder. Ist ein Vorrat leer,
+bleibt der Knopf antippbar und sagt dir unter dem Brett, was Nachschub kostet.
+
+## Das Schloss einrichten
+
+Neben den Kristallen gibt es **Münzen**, und zwar für jedes geschaffte Level.
+Sie gehen nicht in den Shop, sondern ins Schloss: drei Räume — Eingangshalle,
+Bibliothek, Rosengarten — mit je vier Aufgaben und zwei Varianten zur Auswahl.
+Marmor oder Parkett, Bücherregale oder Gemälde, Springbrunnen oder Blütenbaum.
+
+Zwei getrennte Töpfe, mit Absicht: würde Einrichten aus derselben Kasse
+bezahlt wie Booster und Leben, wäre jede hübsche Entscheidung ein Rückschritt
+im Spiel. So läuft beides nebeneinander.
+
+Ein Level bringt rund 70 bis 150 Münzen, ein Raum kostet 640 bis 940 — das
+sind gemessene sechs bis acht Level pro Raum, zwanzig fürs ganze Schloss. Ein
+Raum geht erst auf, wenn der davor fertig ist. Die Räume sind wie alles andere
+gezeichnet, nicht geladen: [`js/roomart.js`](js/roomart.js) malt sie auf ein
+Canvas.
 
 Alles davon liegt im `localStorage` des Browsers. Wer will, kann es dort
 manipulieren — ohne Benutzerkonten und serverseitige Spielstände lässt sich
@@ -200,9 +249,10 @@ späten Leveln unerreichbar.
 
 ```bash
 node test/board.test.js     # 43 Prüfungen — Spielfeldlogik
-node test/player.test.js    # 57 Prüfungen — Leben, Kristalle, Käufe
+node test/player.test.js    # 74 Prüfungen — Leben, Kristalle, Münzen, Käufe
 node test/levels.test.js    # 44 Prüfungen — Level, Aufgaben, Übungslevel
 node test/tutorial.test.js  # 35 Prüfungen — Erklärkette im Übungslevel
+node test/rooms.test.js     # 36 Prüfungen — Zimmer, Freischaltung, Preise
 ```
 
 Ohne Framework und ohne Browser.
@@ -238,10 +288,18 @@ js/board.js         Spielfeldlogik — ohne DOM, in Node testbar
 js/game.js          Zustandsautomat, Züge, Animationen, Canvas-Rendering
 js/map.js           Level-Landkarte
 js/tutorial.js      Erklärschritte im Übungslevel
+js/icons.js         Booster-Symbole, gezeichnet statt Emoji
+js/rooms.js         Zimmer, Aufgaben und Preise — ohne DOM, in Node testbar
+js/roomart.js       Die Zimmer auf Canvas malen
 js/leaderboard.js   Online-Client mit lokalem Fallback
 js/ui.js            Screens, HUD, Popups
 js/main.js          Bootstrap, Eingabe, Ablaufsteuerung
 server/server.js    Bestenlisten-Server
+sw.js               Service Worker fuer den Offline-Betrieb
+manifest.webmanifest  PWA-Angaben
+icons/              App-Icon als SVG plus gerenderte PNG-Groessen
+android/            Android-Projekt und Build-Skript
+download/           Download-Seite, APK und iOS-Profil
 test/               Tests und das Balance-Werkzeug
 ```
 

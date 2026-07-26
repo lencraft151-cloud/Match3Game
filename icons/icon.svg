@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- App-Icon: drei Steine aus dem Spiel auf koeniglichem Grund.
+       Dieselben Formen und Farben wie auf dem Brett — wer das Icon sieht,
+       erkennt das Spiel wieder. -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b4bb8"/>
+      <stop offset="0.55" stop-color="#16307e"/>
+      <stop offset="1" stop-color="#0a1a4d"/>
+    </linearGradient>
+
+    <radialGradient id="halo" cx="0.5" cy="0.42" r="0.62">
+      <stop offset="0" stop-color="#ffd76a" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#ffd76a" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="ruby" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff9db3"/>
+      <stop offset="0.45" stop-color="#ff4f7b"/>
+      <stop offset="1" stop-color="#a3203f"/>
+    </linearGradient>
+
+    <linearGradient id="teal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a6fff2"/>
+      <stop offset="0.45" stop-color="#38f2d8"/>
+      <stop offset="1" stop-color="#12907f"/>
+    </linearGradient>
+
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff0b8"/>
+      <stop offset="0.45" stop-color="#ffcc4d"/>
+      <stop offset="1" stop-color="#a87710"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <rect width="512" height="512" rx="112" fill="url(#halo)"/>
+
+  <!-- Amethyst-Stern hinten links, angeschnitten: gibt Tiefe -->
+  <g opacity="0.35">
+    <path d="M96 138 L112 176 L152 180 L122 208 L130 248 L96 228 L62 248 L70 208 L40 180 L80 176 Z"
+          fill="#b36bff"/>
+  </g>
+  <g opacity="0.35">
+    <rect x="386" y="330" width="74" height="74" rx="20" fill="#ff8a3d"/>
+  </g>
+
+  <!-- Tuerkis-Sechseck links -->
+  <g transform="translate(168 300)">
+    <path d="M0 -78 L67 -39 L67 39 L0 78 L-67 39 L-67 -39 Z" fill="url(#teal)"
+          stroke="#0c5f54" stroke-width="9" stroke-linejoin="round"/>
+    <ellipse cx="-22" cy="-34" rx="21" ry="10" fill="#ffffff" opacity="0.75"
+             transform="rotate(-38 -22 -34)"/>
+  </g>
+
+  <!-- Bernstein-Raute rechts -->
+  <g transform="translate(348 292)">
+    <path d="M0 -80 L66 0 L0 80 L-66 0 Z" fill="url(#gold)"
+          stroke="#7a5406" stroke-width="9" stroke-linejoin="round"/>
+    <ellipse cx="-20" cy="-34" rx="20" ry="9" fill="#ffffff" opacity="0.75"
+             transform="rotate(-40 -20 -34)"/>
+  </g>
+
+  <!-- Rubin-Kreis vorne mittig, der groesste -->
+  <g transform="translate(256 196)">
+    <circle r="98" fill="url(#ruby)" stroke="#7d1630" stroke-width="10"/>
+    <circle r="56" cy="-8" fill="#ffffff" opacity="0.16"/>
+    <ellipse cx="-31" cy="-42" rx="28" ry="13" fill="#ffffff" opacity="0.85"
+             transform="rotate(-38 -31 -42)"/>
+  </g>
+</svg>

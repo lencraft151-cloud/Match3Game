@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12296b">
+<title>Gem Cascade — installieren</title>
+<link rel="icon" href="../icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<style>
+  :root {
+    --royal-900: #060f33;
+    --royal-800: #0a1a4d;
+    --royal-700: #12296b;
+    --royal-600: #1b3a8f;
+    --royal-500: #2b56c4;
+    --gold: #ffc93c;
+    --gold-light: #ffe08a;
+    --gold-dark: #c8901a;
+    --ink: #eef3ff;
+    --ink-dim: #b9c6e8;
+    --ink-faint: #8496c4;
+    --line: rgba(255, 255, 255, 0.14);
+    --success: #56d97b;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 30px 16px 60px;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 0%, var(--royal-600), var(--royal-900) 70%);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    line-height: 1.55;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  main { max-width: 620px; margin: 0 auto; }
+
+  .head { text-align: center; margin-bottom: 34px; }
+
+  .head img {
+    width: 104px;
+    height: 104px;
+    border-radius: 24px;
+    box-shadow: 0 10px 26px rgba(0, 0, 0, 0.5);
+  }
+
+  h1 { margin: 16px 0 4px; font-size: 30px; letter-spacing: -0.4px; }
+
+  .head p { margin: 0; color: var(--ink-dim); font-size: 15px; }
+
+  .card {
+    margin-bottom: 18px;
+    padding: 20px;
+    border-radius: 18px;
+    border: 2px solid var(--line);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.07), rgba(0, 0, 0, 0.22));
+  }
+
+  .card h2 {
+    margin: 0 0 4px;
+    font-size: 19px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .card h2 .tag {
+    margin-left: auto;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--ink-faint);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+  }
+
+  .card > p { margin: 0 0 14px; color: var(--ink-dim); font-size: 14px; }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 15px 20px;
+    border: 0;
+    border-radius: 13px;
+    background: linear-gradient(180deg, var(--gold-light), var(--gold));
+    box-shadow: 0 5px 0 var(--gold-dark);
+    color: #3d2600;
+    font: inherit;
+    font-size: 17px;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
+  }
+
+  .btn:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--gold-dark); }
+
+  .btn--quiet {
+    background: linear-gradient(180deg, var(--royal-500), var(--royal-600));
+    box-shadow: 0 5px 0 #16337c;
+    color: var(--ink);
+  }
+
+  ol { margin: 14px 0 0; padding-left: 22px; color: var(--ink-dim); font-size: 14px; }
+  ol li { margin-bottom: 5px; }
+
+  .note {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border-radius: 11px;
+    border-left: 4px solid var(--gold);
+    background: rgba(255, 201, 60, 0.1);
+    font-size: 13px;
+    color: var(--ink-dim);
+  }
+
+  .note strong { color: var(--gold-light); }
+
+  .facts {
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+
+  .facts li { display: flex; gap: 8px; padding: 3px 0; }
+  .facts b { color: var(--ink-dim); font-weight: 600; min-width: 118px; }
+
+  .foot {
+    margin-top: 30px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+
+  .foot a { color: var(--gold); }
+
+  code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.35);
+    font-size: 12px;
+  }
+</style>
+</head>
+<body>
+<main>
+
+  <div class="head">
+    <img src="../icons/icon-192.png" alt="Gem Cascade">
+    <h1>Gem Cascade</h1>
+    <p>Match&nbsp;3 mit Landkarte, Boostern und einem Schloss zum Einrichten.</p>
+  </div>
+
+  <!-- ------------------------------------------------------------ Android -->
+  <section class="card">
+    <h2>🤖 Android <span class="tag">APK · Fassung 1.0</span></h2>
+    <p>Die App bringt das ganze Spiel mit und läuft <strong>komplett ohne
+       Internet</strong>. Sie fordert <strong>keine einzige Berechtigung</strong>
+       an.</p>
+
+    <a class="btn" href="GemCascade.apk" download>GemCascade.apk herunterladen</a>
+
+    <ol>
+      <li>Datei herunterladen und antippen.</li>
+      <li>Android fragt nach — <em>„Aus dieser Quelle installieren"</em> erlauben.</li>
+      <li>Installieren, fertig.</li>
+    </ol>
+
+    <p class="note">
+      <strong>Warum die Warnung kommt:</strong> die App ist mit einem eigenen
+      Schlüssel signiert und nicht über den Play Store verteilt. Android warnt
+      dann grundsätzlich vor „unbekannten Quellen" — das ist die normale
+      Meldung für jede App außerhalb des Stores, kein Hinweis auf einen Fehler.
+      Für den Play Store bräuchte es ein kostenpflichtiges Entwicklerkonto.
+    </p>
+
+    <ul class="facts">
+      <li><b>Android</b> ab 6.0 (API 23)</li>
+      <li><b>Größe</b> rund 0,5 MB</li>
+      <li><b>Paket</b> <code>io.github.gemcascade</code></li>
+      <li><b>Berechtigungen</b> keine</li>
+    </ul>
+  </section>
+
+  <!-- ---------------------------------------------------------------- iOS -->
+  <section class="card">
+    <h2>🍎 iPhone &amp; iPad <span class="tag">Profil oder Safari</span></h2>
+    <p>Für iOS gibt es zwei Wege. Der <strong>zweite ist der einfachere</strong>
+       und braucht gar nichts zusätzlich.</p>
+
+    <a class="btn btn--quiet" href="GemCascade.mobileconfig" download>
+      Profil laden (legt ein Symbol an)
+    </a>
+
+    <ol>
+      <li>Profil laden, dann <em>Einstellungen → Profil geladen → Installieren</em>.</li>
+      <li>Das Symbol liegt danach auf dem Home-Bildschirm.</li>
+    </ol>
+
+    <p class="note">
+      <strong>Was drinsteckt:</strong> nur ein Web&nbsp;Clip — ein Symbol, das
+      das Spiel im Vollbild öffnet. Keine Zertifikate, keine Zugriffsrechte,
+      keine Einschränkungen. iOS zeigt das Profil als
+      <em>„Nicht verifiziert"</em>, weil es nicht mit einem
+      Apple-Entwicklerzertifikat signiert ist. Entfernen jederzeit unter
+      <em>Einstellungen → Allgemein → VPN &amp; Geräteverwaltung</em>.
+    </p>
+
+    <p class="note">
+      <strong>Ohne Profil geht es auch:</strong> das Spiel in Safari öffnen,
+      auf <em>Teilen</em> tippen und <em>„Zum Home-Bildschirm"</em> wählen.
+      Gleiches Ergebnis, keine Installation.
+    </p>
+  </section>
+
+  <!-- ------------------------------------------------------------ Sonstige -->
+  <section class="card">
+    <h2>💻 Alles andere <span class="tag">direkt im Browser</span></h2>
+    <p>Am Rechner und überall sonst läuft das Spiel einfach im Browser — und
+       lässt sich dort ebenfalls installieren: In Chrome oder Edge erscheint
+       rechts in der Adressleiste ein Installieren-Symbol. Danach startet es
+       in einem eigenen Fenster und funktioniert auch offline.</p>
+
+    <a class="btn btn--quiet" href="../index.html">Im Browser spielen</a>
+  </section>
+
+  <p class="foot">
+    Quelltext auf
+    <a href="https://github.com/lencraft151-cloud/Match3Game">GitHub</a>
+  </p>
+
+</main>
+</body>
+</html>

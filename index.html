@@ -5,10 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#12296b">
 <title>Gem Cascade — Match 3</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#128142;</text></svg>">
+<meta name="description" content="Match-3 mit Level-Landkarte, Boostern und einem Schloss zum Einrichten.">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gem Cascade">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+
+<!-- Ladebild. Es steht im HTML statt im Skript, damit es schon sichtbar ist,
+     bevor irgendein Skript geladen hat — genau dann, wenn es gebraucht wird.
+     main.js blendet es aus, sobald das Spiel bereit ist. -->
+<div id="splash" class="splash">
+  <div class="splash__ring" aria-hidden="true">
+    <i class="splash__gem splash__gem--1"></i>
+    <i class="splash__gem splash__gem--2"></i>
+    <i class="splash__gem splash__gem--3"></i>
+    <i class="splash__gem splash__gem--4"></i>
+    <i class="splash__gem splash__gem--5"></i>
+    <i class="splash__gem splash__gem--6"></i>
+  </div>
+  <p class="splash__title">Gem Cascade</p>
+  <div class="splash__bar"><span class="splash__fill"></span></div>
+</div>
 
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
 <div id="vignette" aria-hidden="true"></div>
@@ -24,6 +47,7 @@
     <div class="menu">
       <button class="btn btn--primary btn--big" id="btn-start">Spielen</button>
       <button class="btn" id="btn-help">Anleitung</button>
+      <a class="btn btn--quiet" id="btn-install" href="download/">Als App installieren</a>
     </div>
   </div>
   <button class="icon-btn icon-btn--float" id="btn-mute" title="Ton an/aus" aria-label="Ton an/aus">
@@ -42,7 +66,12 @@
       <span class="coin">&#128142;</span>
       <strong id="crystals">0</strong>
     </div>
+    <div class="topbar__stat topbar__stat--gold">
+      <span class="coin coin--gold" aria-hidden="true"></span>
+      <strong id="coins">0</strong>
+    </div>
     <div class="topbar__actions">
+      <button class="icon-btn icon-btn--rooms" id="btn-rooms" title="Schloss einrichten" aria-label="Schloss einrichten">&#127968;</button>
       <button class="icon-btn" id="btn-shop" title="Shop" aria-label="Shop">&#128722;</button>
       <button class="icon-btn" id="btn-scores" title="Bestenliste" aria-label="Bestenliste">&#127942;</button>
       <button class="icon-btn" id="btn-map-help" title="Anleitung" aria-label="Anleitung">?</button>
@@ -77,26 +106,9 @@
             aria-label="Spielfeld. Mit Pfeiltasten bewegen, Leertaste zum Auswählen und Tauschen."></canvas>
   </div>
 
-  <div class="powerbar" id="powerbar" role="group" aria-label="Power-Ups">
-    <button class="power power--hammer" id="pw-hammer" type="button">
-      <span class="power__badge"><span class="power__icon">&#128296;</span></span>
-      <span class="power__name">Hammer</span>
-      <span class="power__effect">Kreuz räumen</span>
-      <span class="power__count" id="count-hammer">0</span>
-    </button>
-    <button class="power power--shuffle" id="pw-shuffle" type="button">
-      <span class="power__badge"><span class="power__icon">&#128256;</span></span>
-      <span class="power__name">Mischen</span>
-      <span class="power__effect">neues Feld</span>
-      <span class="power__count" id="count-shuffle">0</span>
-    </button>
-    <button class="power power--moves" id="pw-moves" type="button">
-      <span class="power__badge"><span class="power__icon">&#10133;</span></span>
-      <span class="power__name">Züge</span>
-      <span class="power__effect">+7 Züge</span>
-      <span class="power__count" id="count-moves">0</span>
-    </button>
-  </div>
+  <!-- Die Karten baut js/ui.js aus Player.ITEMS, damit Name, Wirkung und
+       Symbol nicht an zwei Stellen gepflegt werden muessen. -->
+  <div class="powerbar" id="powerbar" role="group" aria-label="Booster"></div>
 
   <div class="tutorial" id="tutorial" hidden>
     <p class="tutorial__step" id="tutorial-step"></p>
@@ -157,6 +169,9 @@
       <div class="tally__row"><dt>Punkte</dt><dd id="win-score">0</dd></div>
       <div class="tally__row"><dt>Züge übrig</dt><dd id="win-moves">0</dd></div>
       <div class="tally__row tally__row--crystals"><dt>Kristalle</dt><dd id="win-crystals">+0</dd></div>
+      <div class="tally__row tally__row--coins" id="win-coin-row">
+        <dt>Münzen fürs Schloss</dt><dd id="win-coins">+0</dd>
+      </div>
     </dl>
 
     <button class="btn btn--primary btn--big" id="btn-win-next">Weiter</button>
@@ -183,6 +198,45 @@
       <button class="btn btn--quiet" id="btn-fail-map">Karte</button>
     </div>
     <p class="fail__cost">Aufgeben kostet ein Leben &#10084;&#65039;</p>
+  </div>
+</section>
+
+<!-- ============================ ZIMMER =========================== -->
+<section class="screen" id="screen-rooms">
+  <div class="panel panel--wide panel--rooms">
+    <div class="ribbon" id="room-name">Eingangshalle</div>
+
+    <p class="card__lead" id="room-lead"></p>
+
+    <div class="room__stage">
+      <canvas class="room__canvas" id="room-canvas"
+              role="img" aria-label="Dein Zimmer"></canvas>
+      <div class="room__nav">
+        <button class="icon-btn" id="btn-room-prev" title="Vorheriges Zimmer"
+                aria-label="Vorheriges Zimmer">&#8249;</button>
+        <span class="room__count" id="room-count">1 / 3</span>
+        <button class="icon-btn" id="btn-room-next" title="Nächstes Zimmer"
+                aria-label="Nächstes Zimmer">&#8250;</button>
+      </div>
+    </div>
+
+    <div class="room__bar">
+      <div class="room__fill" id="room-fill"></div>
+      <span class="room__progress" id="room-progress">0 von 4</span>
+    </div>
+
+    <div class="room__task" id="room-task">
+      <p class="room__question" id="room-question"></p>
+      <ul class="room__options" id="room-options"></ul>
+    </div>
+
+    <p class="room__done" id="room-done" hidden>
+      Dieses Zimmer ist fertig. Sammle weiter Münzen für das nächste!
+    </p>
+
+    <p class="room__state" id="room-state"></p>
+
+    <button class="btn" id="btn-rooms-back">Zurück</button>
   </div>
 </section>
 
@@ -269,10 +323,13 @@
 <script src="js/goals.js"></script>
 <script src="js/player.js"></script>
 <script src="js/audio.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/particles.js"></script>
 <script src="js/levels.js"></script>
 <script src="js/board.js"></script>
 <script src="js/leaderboard.js"></script>
+<script src="js/rooms.js"></script>
+<script src="js/roomart.js"></script>
 <script src="js/game.js"></script>
 <script src="js/map.js"></script>
 <script src="js/tutorial.js"></script>

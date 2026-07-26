@@ -18,35 +18,54 @@
 
   var Player = {};
 
-  /* Preise und Anzeigedaten der Power-Ups an einer Stelle. */
+  /* Preise und Anzeigedaten der Booster an einer Stelle.
+
+     `art` benennt die gezeichnete Form — die Icons sind keine Emojis mehr,
+     sondern werden von js/icons.js gemalt. So sehen sie in der Leiste, im
+     Shop und in der Anleitung gleich aus und passen zum Rest des Spiels. */
   var ITEMS = {
-    hammer: {
-      key: 'hammer',
-      name: 'Hammer',
-      icon: '🔨',
-      price: CONFIG.PRICE_HAMMER,
-      hint: 'Tippe ein Feld an: es und die vier Nachbarn fliegen raus, Felsen inklusive.'
+    rocket: {
+      key: 'rocket',
+      art: 'rocket',
+      name: 'Rakete',
+      effect: 'Reihe räumen',
+      price: CONFIG.PRICE_ROCKET,
+      hint: 'Tippe ein Feld an — die Rakete fegt die ganze Reihe oder Spalte leer.'
     },
-    shuffle: {
-      key: 'shuffle',
-      name: 'Mischen',
-      icon: '🔀',
-      price: CONFIG.PRICE_SHUFFLE,
-      hint: 'Würfelt das Feld neu und sorgt für mindestens ' +
-        CONFIG.POWERUP_SHUFFLE_MIN_MOVES + ' mögliche Züge.'
+    bomb: {
+      key: 'bomb',
+      art: 'bomb',
+      name: 'Bombe',
+      effect: '3×3 sprengen',
+      price: CONFIG.PRICE_BOMB,
+      hint: 'Tippe ein Feld an: es und alle acht Nachbarn fliegen raus, Felsen inklusive.'
     },
     moves: {
       key: 'moves',
+      art: 'moves',
       name: 'Extra-Züge',
-      icon: '➕',
+      /* Auf der schmalen Karte in der Leiste bricht "Extra-Züge" um und macht
+         die Karte hoeher als ihre Nachbarn. Dort steht deshalb die
+         Kurzform. */
+      short: 'Züge',
+      effect: '+' + CONFIG.POWERUP_EXTRA_MOVES + ' Züge',
       price: CONFIG.PRICE_MOVES,
       hint: 'Legt ' + CONFIG.POWERUP_EXTRA_MOVES +
         ' Züge drauf. Kostet selbst keinen Zug.'
+    },
+    shuffle: {
+      key: 'shuffle',
+      art: 'shuffle',
+      name: 'Mischen',
+      effect: 'neues Feld',
+      price: CONFIG.PRICE_SHUFFLE,
+      hint: 'Würfelt das Feld neu und sorgt für mindestens ' +
+        CONFIG.POWERUP_SHUFFLE_MIN_MOVES + ' mögliche Züge.'
     }
   };
 
   Player.ITEMS = ITEMS;
-  Player.ITEM_KEYS = ['hammer', 'shuffle', 'moves'];
+  Player.ITEM_KEYS = ['rocket', 'bomb', 'moves', 'shuffle'];
 
   /* --------------------------------------------------------------- Zustand */
 
@@ -67,12 +86,21 @@
       /* Zeitpunkt, an dem das naechste Herz faellig ist. Nur gesetzt, wenn
          ueberhaupt Herzen fehlen. */
       nextRegenAt: 0,
-      powerups: {
-        hammer: CONFIG.STARTING_POWERUPS.hammer,
-        shuffle: CONFIG.STARTING_POWERUPS.shuffle,
-        moves: CONFIG.STARTING_POWERUPS.moves
-      }
+      /* Muenzen sind die zweite Waehrung: sie kommen nur aus geschafften
+         Leveln und gehen nur in die Zimmer. Kristalle bleiben fuer den Shop
+         zustaendig — zwei Toepfe, damit Einrichten und Weiterkommen nicht um
+         dieselbe Muenze konkurrieren. */
+      coins: 0,
+      powerups: powerupDefaults()
     };
+  }
+
+  function powerupDefaults() {
+    var out = {};
+    Player.ITEM_KEYS.forEach(function (key) {
+      out[key] = CONFIG.STARTING_POWERUPS[key] || 0;
+    });
+    return out;
   }
 
   /* Fremde oder beschaedigte Werte werden hier eingefangen — ein kaputter
@@ -83,11 +111,19 @@
 
     var out = {
       crystals: clampInt(raw.crystals, 0, 9999999, 0),
+      coins: clampInt(raw.coins, 0, 9999999, 0),
       lives: clampInt(raw.lives, 0, CONFIG.LIVES_CAP, CONFIG.MAX_LIVES),
       day: typeof raw.day === 'string' ? raw.day : base.day,
       nextRegenAt: clampInt(raw.nextRegenAt, 0, 8640000000000000, 0),
       powerups: {}
     };
+
+    /* Der Hammer ist zur Bombe geworden. Ein alter Vorrat verfaellt deshalb
+       nicht, sondern wird uebernommen — verlorene Kaeufe waeren die
+       schlechteste Art, eine Umbenennung zu feiern. */
+    if (raw.powerups && raw.powerups.hammer > 0 && !(raw.powerups.bomb > 0)) {
+      raw.powerups.bomb = raw.powerups.hammer;
+    }
 
     Player.ITEM_KEYS.forEach(function (key) {
       var stored = raw.powerups ? raw.powerups[key] : undefined;
@@ -176,17 +212,19 @@
     if (!state) Player.load();
     refresh();
 
+    var powerups = {};
+    Player.ITEM_KEYS.forEach(function (key) {
+      powerups[key] = state.powerups[key] || 0;
+    });
+
     return {
       crystals: state.crystals,
+      coins: state.coins,
       lives: state.lives,
       maxLives: CONFIG.MAX_LIVES,
       nextRegenAt: state.nextRegenAt,
       msToNextLife: state.nextRegenAt ? Math.max(0, state.nextRegenAt - Date.now()) : 0,
-      powerups: {
-        hammer: state.powerups.hammer,
-        shuffle: state.powerups.shuffle,
-        moves: state.powerups.moves
-      }
+      powerups: powerups
     };
   };
 
@@ -230,6 +268,41 @@
 
   Player.canAfford = function (price) {
     return Player.snapshot().crystals >= price;
+  };
+
+  /* ---------------------------------------------------------------- Muenzen */
+
+  /* Muenzen fuers Einrichten. Bewusst ein zweiter Topf neben den Kristallen:
+     wer sein Zimmer schoen machen will, soll dafuer nicht auf das Extra-Leben
+     verzichten muessen, das ihn weiterbringt. */
+  Player.coinsForLevel = function (level, stars) {
+    return CONFIG.COINS_BASE +
+      CONFIG.COINS_PER_LEVEL * Math.max(1, level) +
+      CONFIG.COINS_PER_STAR * Utils.clamp(Math.floor(stars) || 0, 0, 3);
+  };
+
+  Player.earnCoins = function (amount) {
+    Player.snapshot();
+    var gain = Math.max(0, Math.round(amount) || 0);
+    state.coins = Math.min(9999999, state.coins + gain);
+    save();
+    return state.coins;
+  };
+
+  Player.canAffordCoins = function (price) {
+    return Player.snapshot().coins >= price;
+  };
+
+  /* Bucht Muenzen ab. Liefert false, wenn es nicht reicht — dann wird auch
+     nichts abgebucht. */
+  Player.spendCoins = function (price) {
+    Player.snapshot();
+    var cost = Math.max(0, Math.round(price) || 0);
+    if (state.coins < cost) return false;
+
+    state.coins -= cost;
+    save();
+    return true;
   };
 
   /* Bucht Kristalle ab, ohne dafuer einen Gegenstand zu liefern — etwa fuer

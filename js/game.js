@@ -41,6 +41,33 @@
      auch bei Farbfehlsichtigkeit lesbar. */
   var SHAPES = ['circle', 'diamond', 'triangle', 'hexagon', 'star', 'square', 'cross'];
 
+  /* Das Brett wechselt alle paar Level sein Gewand. Nur Optik: Feldform,
+     Faerbung und Rahmen. Groesse, Regeln und Lesbarkeit bleiben gleich —
+     ein Thema darf hübsch sein, aber nie im Weg stehen.
+
+       tint   Grundton der Felder
+       even   Helligkeit der hellen Felder
+       odd    Helligkeit der dunklen Felder
+       round  Eckenradius als Anteil der Feldgroesse (0 = eckig)
+       inset  Abstand zum Nachbarfeld in Pixeln
+       glow   Farbe eines zarten Scheins unter dem Gitter, oder null */
+  var THEMES = [
+    { key: 'royal',   name: 'Königsblau', tint: '255,255,255', even: 0.035, odd: 0.015, round: 0.16, inset: 2, glow: null },
+    { key: 'amber',   name: 'Bernsteinsaal', tint: '255,208,120', even: 0.07, odd: 0.028, round: 0.42, inset: 3, glow: 'rgba(255,190,90,0.06)' },
+    { key: 'emerald', name: 'Smaragdgrotte', tint: '140,255,200', even: 0.06, odd: 0.022, round: 0.06, inset: 2, glow: 'rgba(80,255,190,0.05)' },
+    { key: 'violet',  name: 'Amethystgewölbe', tint: '200,160,255', even: 0.075, odd: 0.03, round: 0.5, inset: 4, glow: 'rgba(170,110,255,0.07)' },
+    { key: 'frost',   name: 'Eispalast', tint: '190,235,255', even: 0.085, odd: 0.03, round: 0.12, inset: 3, glow: 'rgba(120,210,255,0.07)' },
+    { key: 'ember',   name: 'Glutkammer', tint: '255,150,110', even: 0.07, odd: 0.026, round: 0.3, inset: 2, glow: 'rgba(255,120,60,0.06)' }
+  ];
+
+  /* Alle vier Level ein neues Gewand — oft genug, dass es auffaellt, selten
+     genug, dass man sich an keines gewoehnt. Das Uebungslevel bleibt beim
+     ruhigen Grundthema: dort wird erklaert, nicht dekoriert. */
+  function themeFor(level) {
+    if (!(level > 0)) return THEMES[0];
+    return THEMES[Math.floor((level - 1) / 4) % THEMES.length];
+  }
+
   /* ------------------------------------------------------------ Zeitwerte */
 
   var PHASE = {
@@ -83,6 +110,7 @@
     this.board = null;
     this.level = 1;
     this.def = Levels.get(1);
+    this.theme = THEMES[0];
 
     this.totalScore = 0;
     this.levelScore = 0;
@@ -104,7 +132,7 @@
     this.selected = null;      /* Index des angetippten Steins */
     this.cursor = null;        /* Tastatur-Cursor */
     this.dragOrigin = null;    /* Startpunkt einer Ziehgeste */
-    this.armed = null;         /* scharfes Power-Up, aktuell nur 'hammer' */
+    this.armed = null;         /* scharfer Booster: 'bomb' oder 'rocket' */
     this.hint = null;
     this.idleTime = 0;
     this.guide = null;         /* Fuehrung im Uebungslevel, sonst immer null */
@@ -167,6 +195,8 @@
   Game.prototype.startLevel = function (level) {
     this.level = level;
     this.def = Levels.get(level);
+    this.theme = themeFor(level);
+    if (this.hooks.onTheme) this.hooks.onTheme(this.theme);
 
     this.board = new Board({
       cols: this.cols,
@@ -368,7 +398,7 @@
         this.refuse('read');
         return;
       }
-      if (this.guide.mode === 'power' && this.armed !== 'hammer') {
+      if (this.guide.mode === 'power' && !this.armed) {
         this.refuse('power');
         return;
       }
@@ -378,10 +408,12 @@
       }
     }
 
-    /* Scharfer Hammer: der Tipp schlaegt zu, statt zu tauschen. */
-    if (this.armed === 'hammer') {
+    /* Scharfer Booster: der Tipp schlaegt zu, statt zu tauschen. */
+    if (this.armed === 'bomb' || this.armed === 'rocket') {
+      var weapon = this.armed;
       this.disarm();
-      this.useHammer(idx);
+      if (weapon === 'bomb') this.useBomb(idx);
+      else this.useRocket(idx);
       return;
     }
 
@@ -522,18 +554,24 @@
   /*  Power-Ups                                                             */
   /* ====================================================================== */
 
-  /* Der Hammer braucht ein Ziel, also wird er erst "scharf gemacht" und
-     schlaegt beim naechsten Tipp aufs Brett zu. Die anderen beiden wirken
-     sofort. */
-  Game.prototype.armHammer = function () {
-    if (!this.acceptsInput()) return false;
-    if (!this.guideAllowsPower('hammer')) return this.refuse(this.guide.mode);
+  /* Bombe und Rakete brauchen ein Ziel, also werden sie erst "scharf gemacht"
+     und schlagen beim naechsten Tipp aufs Brett zu. Mischen und Extra-Zuege
+     wirken sofort. */
+  var ARM_HINTS = {
+    bomb: 'Bombe scharf — tippe ein Feld an, die acht Nachbarn fliegen mit',
+    rocket: 'Rakete bereit — tippe ein Feld an, die Reihe oder Spalte fliegt raus'
+  };
 
-    this.armed = 'hammer';
+  Game.prototype.arm = function (key) {
+    if (!this.acceptsInput()) return false;
+    if (!ARM_HINTS[key]) return false;
+    if (!this.guideAllowsPower(key)) return this.refuse(this.guide.mode);
+
+    this.armed = key;
     this.selected = null;
     this.hint = null;
-    this.say('Hammer bereit — tippe ein Feld an, das Kreuz drumherum fliegt mit');
-    if (this.hooks.onArmChange) this.hooks.onArmChange('hammer');
+    this.say(ARM_HINTS[key]);
+    if (this.hooks.onArmChange) this.hooks.onArmChange(key);
     return true;
   };
 
@@ -544,43 +582,93 @@
     if (this.hooks.onArmChange) this.hooks.onArmChange(null);
   };
 
-  /* Der Hammer raeumt ein Kreuz: das angetippte Feld und seine vier direkten
-     Nachbarn. Felsen im Kreuz zerbrechen automatisch — resolveBlast raeumt
-     jeden Fels, der an ein geraeumtes Feld grenzt. */
-  Game.prototype.useHammer = function (idx) {
+  /* Die Bombe raeumt 3x3: das angetippte Feld und alle acht Nachbarn.
+     Felsen darin zerbrechen automatisch — resolveBlast raeumt jeden Fels,
+     der an ein geraeumtes Feld grenzt. */
+  Game.prototype.useBomb = function (idx) {
     if (!this.board.cells[idx]) return false;
+
+    var reach = CONFIG.POWERUP_BOMB_RADIUS;
+    var c0 = this.board.colOf(idx);
+    var r0 = this.board.rowOf(idx);
+    var area = [];
+
+    for (var dc = -reach; dc <= reach; dc++) {
+      for (var dr = -reach; dr <= reach; dr++) {
+        var c = c0 + dc;
+        var r = r0 + dr;
+        if (this.board.inBounds(c, r)) area.push(this.board.idx(c, r));
+      }
+    }
+
+    var pos = this.cellCenter(c0, r0);
+    this.fx.ring(pos.x, pos.y, this.cell * 3.2, '#ff8a5c', 7);
+    this.fx.burst(pos.x, pos.y, '#ff8a5c', 26, 1.5);
+    this.addShake(13);
+    Audio.hammer();
+
+    return this.blastCells(area, 'bomb');
+  };
+
+  /* Die Rakete fegt eine ganze Reihe oder Spalte leer. Welche von beiden,
+     entscheidet der Zufall — das haelt sie unberechenbar genug, dass sie
+     nicht die Bombe ersetzt, und macht sie zum billigeren Aufraeumer. */
+  Game.prototype.useRocket = function (idx) {
+    if (!this.board.cells[idx]) return false;
+
+    var horizontal = Math.random() < 0.5;
+    var c0 = this.board.colOf(idx);
+    var r0 = this.board.rowOf(idx);
+    var line = [];
+    var i;
+
+    if (horizontal) {
+      for (i = 0; i < this.cols; i++) line.push(this.board.idx(i, r0));
+    } else {
+      for (i = 0; i < this.rows; i++) line.push(this.board.idx(c0, i));
+    }
+
+    var pos = this.cellCenter(c0, r0);
+    var span = (horizontal ? this.cols : this.rows) * this.cell;
+
+    if (horizontal) {
+      this.fx.beam(this.pad, pos.y, span, this.cell * 0.55, true, '#9fd8ff');
+    } else {
+      this.fx.beam(pos.x, this.pad, span, this.cell * 0.55, false, '#9fd8ff');
+    }
+    this.fx.burst(pos.x, pos.y, '#9fd8ff', 20, 1.3);
+    this.addShake(11);
+    Audio.beam();
+
+    return this.blastCells(line, 'rocket');
+  };
+
+  /* Gemeinsamer Weg fuer Bombe und Rakete: die getroffenen Steine gehen ueber
+     die normale Aufloesung, damit erwischte Spezialsteine mitzuenden. Reine
+     Felsen raeumt resolveBlast nicht von allein — die brauchen den zweiten
+     Weg. */
+  Game.prototype.blastCells = function (cells, key) {
+    var self = this;
 
     this.selected = null;
     this.hint = null;
     this.idleTime = 0;
 
-    var self = this;
-    var cross = [idx].concat(this.board.neighbors4(idx));
-
-    var pos = this.cellCenter(this.board.colOf(idx), this.board.rowOf(idx));
-    this.fx.ring(pos.x, pos.y, this.cell * 2.4, '#ffcc4d', 6);
-    this.fx.burst(pos.x, pos.y, '#ffcc4d', 18, 1.2);
-    this.addShake(9);
-    Audio.hammer();
-
-    /* Steine im Kreuz gehen ueber die normale Aufloesung, damit getroffene
-       Spezialsteine mitzuenden. */
-    var gems = cross.filter(function (i) {
+    var gems = cells.filter(function (i) {
       var g = self.board.cells[i];
       return g && g.kind !== 'blocker';
     });
 
     if (gems.length) {
       this.cascade = 0;
-      this.pendingSwapSeeds = { a: idx, b: idx, rainbow: gems, targets: {} };
+      this.pendingSwapSeeds = { a: cells[0], b: cells[0], rainbow: gems, targets: {} };
       this.resolve();
     } else {
-      /* Nur Felsen getroffen — die raeumt resolveBlast nicht von allein. */
       this.cascade = 1;
-      this.startClear({ cleared: [], blockers: cross, activations: [] }, [], null);
+      this.startClear({ cleared: [], blockers: cells, activations: [] }, [], null);
     }
 
-    this.spent('hammer');
+    this.spent(key);
     return true;
   };
 
@@ -1398,14 +1486,32 @@
 
   Game.prototype.drawGrid = function (ctx) {
     var cell = this.cell;
+    var theme = this.theme;
+    var inset = theme.inset;
+
+    /* Ein Schein unter dem Gitter gibt dem Thema seine Grundstimmung, ohne
+       die Steine zu ueberdecken. */
+    if (theme.glow) {
+      var span = Math.max(this.cols, this.rows) * cell;
+      var halo = ctx.createRadialGradient(
+        this.pad + span / 2, this.pad + span / 2, span * 0.1,
+        this.pad + span / 2, this.pad + span / 2, span * 0.7);
+      halo.addColorStop(0, theme.glow);
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = halo;
+      ctx.fillRect(0, 0, this.cssSize, this.cssSize);
+    }
 
     for (var r = 0; r < this.rows; r++) {
       for (var c = 0; c < this.cols; c++) {
         var x = this.pad + c * cell;
         var y = this.pad + r * cell;
+        var light = (c + r) % 2 === 0;
 
-        ctx.fillStyle = (c + r) % 2 === 0 ? 'rgba(255,255,255,0.035)' : 'rgba(255,255,255,0.015)';
-        roundRect(ctx, x + 2, y + 2, cell - 4, cell - 4, cell * 0.16);
+        ctx.fillStyle = 'rgba(' + theme.tint + ',' +
+          (light ? theme.even : theme.odd) + ')';
+        roundRect(ctx, x + inset, y + inset,
+          cell - inset * 2, cell - inset * 2, cell * theme.round);
         ctx.fill();
       }
     }

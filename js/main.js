@@ -25,6 +25,7 @@
   var UI = root.M3.UI;
   var Map = root.M3.Map;
   var Tutorial = root.M3.Tutorial;
+  var Rooms = root.M3.Rooms;
   var Game = root.M3.Game;
   var COLORS = root.M3.GEM_COLORS;
 
@@ -65,6 +66,14 @@
 
   function saveProgress() {
     Utils.storeSet(CONFIG.STORE_PROGRESS, progressState);
+  }
+
+  /* Was im Schloss schon eingerichtet ist. Eigener Schluessel, damit ein
+     Reset des Levelfortschritts die Einrichtung nicht mitnimmt. */
+  var roomState = Rooms.sanitize(Utils.storeGet(CONFIG.STORE_ROOMS, null));
+
+  function saveRooms() {
+    Utils.storeSet(CONFIG.STORE_ROOMS, roomState);
   }
 
   /* Laufende Gesamtpunkte ueber alle Level — das ist der Wert fuer die
@@ -308,6 +317,12 @@
       UI.setHint(text, warn);
     },
 
+    /* Das Brett wechselt je nach Level sein Gewand — der Rahmen drumherum
+       zieht mit, sonst sieht das Thema wie ein Fehler aus. */
+    onTheme: function (theme) {
+      UI.setBoardTheme(theme);
+    },
+
     onLevelComplete: function (data) {
       Tutorial.stop();
       lastWin = data;
@@ -324,7 +339,15 @@
       var crystals = Player.crystalsForLevel(data.level, data.stars);
       Player.earn(crystals);
 
-      UI.showWin(data, crystals);
+      /* Muenzen fuers Schloss. Das Uebungslevel bringt keine — sonst waere
+         der beste Weg zum eingerichteten Zimmer, die Uebung immer wieder zu
+         spielen. */
+      var coins = Levels.isTutorial(data.level)
+        ? 0
+        : Player.coinsForLevel(data.level, data.stars);
+      if (coins) Player.earnCoins(coins);
+
+      UI.showWin(data, crystals, coins);
 
       /* Sterne nacheinander, danach das Kristall-Klimpern. */
       for (var i = 0; i < data.stars; i++) {
@@ -401,6 +424,53 @@
   /*  Shop und Power-Ups                                                    */
   /* ====================================================================== */
 
+  /* ====================================================================== */
+  /*  Zimmer                                                                */
+  /* ====================================================================== */
+
+  function openRooms() {
+    UI.setRoomState('');
+    UI.show('screen-rooms');
+    UI.openRoomView();
+  }
+
+  /* Eine Einrichtung kaufen. Der Preis wird hier gegen die Leveldaten
+     geprueft, nicht gegen das, was der Knopf behauptet — sonst liesse sich
+     ueber die Konsole billig einrichten. */
+  function buyFurnishing(roomKey, taskKey, optionKey) {
+    var room = Rooms.byKey(roomKey);
+    var task = Rooms.taskOf(room, taskKey);
+    if (!task) return;
+
+    var option = null;
+    task.options.forEach(function (o) { if (o.key === optionKey) option = o; });
+    if (!option) return;
+
+    /* Schon gekauft? Dann nicht noch einmal abbuchen. */
+    if (Rooms.chosenIn(roomState, roomKey)[taskKey]) return;
+
+    if (!Player.spendCoins(option.price)) {
+      var missing = option.price - Player.snapshot().coins;
+      Audio.denied();
+      UI.setRoomState('Dafür fehlen dir noch ' + missing + ' Münzen. Spiel ein Level!', 'warn');
+      return;
+    }
+
+    Rooms.pick(roomState, roomKey, taskKey, optionKey);
+    saveRooms();
+
+    Audio.purchase();
+    UI.flashRoom();
+    UI.setRoomState(option.name + ' eingebaut.', 'ok');
+    UI.renderRooms();
+
+    /* Zimmer fertig? Das ist der Moment, den das Ganze verdient. */
+    if (Rooms.isComplete(roomState, room)) {
+      Audio.levelUp();
+      UI.setRoomState(room.name + ' ist fertig!', 'ok');
+    }
+  }
+
   function openShop(message) {
     UI.renderShop();
     UI.setShopState(message || '', message ? 'warn' : null);
@@ -428,8 +498,8 @@
   function usePower(key) {
     if (!game.acceptsInput()) return;
 
-    /* Erneutes Antippen entschaerft den Hammer wieder. */
-    if (key === 'hammer' && game.armed === 'hammer') {
+    /* Erneutes Antippen entschaerft einen scharfen Booster wieder. */
+    if (game.armed === key) {
       game.disarm();
       return;
     }
@@ -454,7 +524,7 @@
       return;
     }
 
-    if (key === 'hammer') game.armHammer();
+    if (key === 'bomb' || key === 'rocket') game.arm(key);
     else if (key === 'shuffle') game.usePowerShuffle();
     else if (key === 'moves') game.usePowerMoves();
   }
@@ -550,6 +620,8 @@
     });
 
     /* --- Karte --- */
+    on('btn-rooms', openRooms);
+    on('btn-rooms-back', function () { openMap(); });
     on('btn-shop', function () { openShop(); });
     on('btn-map-help', function () { openHelp(); });
     on('btn-scores', function () {
@@ -571,9 +643,9 @@
     /* Mitten im Level zur Karte: gilt als Aufgeben. */
     on('btn-quit', giveUpLevel);
 
-    on('pw-hammer', function () { usePower('hammer'); });
-    on('pw-shuffle', function () { usePower('shuffle'); });
-    on('pw-moves', function () { usePower('moves'); });
+    Player.ITEM_KEYS.forEach(function (key) {
+      on('pw-' + key, function () { usePower(key); });
+    });
 
     /* --- Gewonnen --- */
     on('btn-win-next', function () {
@@ -689,6 +761,7 @@
   /* ====================================================================== */
 
   function boot() {
+    root.M3.__bootAt = Date.now();
     Player.load();
     UI.init();
 
@@ -698,6 +771,11 @@
 
     Map.init({ onSelect: openLevelStart });
     Tutorial.init();
+
+    UI.initRooms({
+      state: function () { return roomState; },
+      buy: buyFurnishing
+    });
 
     /* Ein Board vorbereiten, damit das Canvas nie leer dasteht. */
     game.startLevel(progressState.unlocked);
@@ -732,8 +810,46 @@
     }, 1000);
 
     Leaderboard.flushPending();
+    registerWorker();
 
     root.requestAnimationFrame(frame);
+    hideSplash();
+  }
+
+  /* Macht das Spiel offline spielbar und erlaubt "Zum Startbildschirm
+     hinzufuegen". Ueber `file://` gibt es keine Service Worker — dort wird
+     still nichts getan, statt eine Fehlermeldung zu werfen. */
+  function registerWorker() {
+    if (!root.navigator || !root.navigator.serviceWorker) return;
+    if (root.location.protocol !== 'https:' && root.location.hostname !== 'localhost' &&
+        root.location.hostname !== '127.0.0.1') return;
+
+    root.navigator.serviceWorker.register('sw.js').catch(function () {
+      /* Offline-Betrieb ist ein Bonus, kein Muss — ohne ihn laeuft alles
+         weiter, nur eben nur online. */
+    });
+  }
+
+  /* Das Ladebild verschwindet erst nach einem gezeichneten Bild — sonst
+     blitzt beim Ausblenden ein leerer Hintergrund durch. Die kurze
+     Mindestzeit verhindert, dass es auf schnellen Geraeten nur zuckt. */
+  function hideSplash() {
+    var splash = doc.getElementById('splash');
+    if (!splash) return;
+
+    var started = root.M3.__bootAt || Date.now();
+    var wait = Math.max(0, 550 - (Date.now() - started));
+
+    root.requestAnimationFrame(function () {
+      root.setTimeout(function () {
+        splash.classList.add('is-gone');
+        /* Nach dem Ausblenden ganz raus: ein unsichtbares Element ueber dem
+           Spiel faengt sonst Klicks ab, wenn irgendwann eine Regel kippt. */
+        root.setTimeout(function () {
+          if (splash.parentNode) splash.parentNode.removeChild(splash);
+        }, 600);
+      }, wait);
+    });
   }
 
   if (doc.readyState === 'loading') {

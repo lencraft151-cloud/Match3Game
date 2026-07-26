@@ -48,9 +48,10 @@
     /* Wie viele Zuege das Zug-Power-Up bringt. */
     POWERUP_EXTRA_MOVES: 7,
 
-    /* Wie viele Felder der Hammer raeumt: das angetippte plus die vier
-       direkten Nachbarn. */
-    POWERUP_HAMMER_CROSS: true,
+    /* Wie weit die Bombe reicht: 1 heisst das angetippte Feld plus ein Ring
+       drumherum, also 3x3. Das ist spuerbar mehr als das Kreuz von frueher
+       und macht den teuersten Nahkampf-Booster seinen Preis wert. */
+    POWERUP_BOMB_RADIUS: 1,
 
     /* Mindestens so viele gueltige Zuege muss das Mischen-Power-Up
        herstellen — sonst mischt es weiter. Ein blosses "irgendein Zug geht"
@@ -84,19 +85,41 @@
     CRYSTALS_PER_LEVEL: 2,
     CRYSTALS_PER_STAR: 15,
 
-    /* Preise im Shop. */
-    /* Preisleiter, bewusst in dieser Reihenfolge und in runden Zahlen:
-       Mischen < Hammer < Extra-Zuege < Leben. Ein geschafftes Level bringt
-       rund 40 bis 95 Kristalle, ein Mischen kostet also etwa ein Level, ein
-       Leben rund zwei. */
-    PRICE_SHUFFLE: 60,
-    PRICE_HAMMER: 80,
-    PRICE_MOVES: 100,
-    PRICE_LIFE: 130,
+    /* Muenzen fuers Einrichten — der zweite Topf, getrennt von den Kristallen.
+       Ein Level bringt rund 60 bis 130 Muenzen, eine Einrichtung kostet 120
+       bis 320. Ein Zimmer ist damit in etwa sechs bis zehn Leveln fertig:
+       nah genug, dass man dranbleibt, weit genug, dass es sich lohnt.
+
+         Level 1 mit 1 Stern    50 + 3 + 20   =  73
+         Level 1 mit 3 Sternen  50 + 3 + 60   = 113
+         Level 20 mit 2 Sternen 50 + 60 + 40  = 150 */
+    COINS_BASE: 50,
+    COINS_PER_LEVEL: 3,
+    COINS_PER_STAR: 20,
+
+    /* Preise im Shop.
+
+       Die Leiter richtet sich danach, wie viel ein Posten wirklich rettet,
+       nicht danach, wie stark er aussieht:
+
+         Rakete 45     raeumt eine Reihe — gut, aber planbar ersetzbar
+         Bombe 70      raeumt 3x3, der staerkste gezielte Schlag
+         Extra-Zuege 90
+         Mischen 140   holt aus einer Sackgasse heraus, in der sonst nichts
+                       mehr geht — das ist der Posten, der ein Level rettet
+         Leben 170     das knappste Gut ueberhaupt
+
+       Ein geschafftes Level bringt rund 40 bis 95 Kristalle. Eine Rakete
+       kostet also etwa ein halbes Level, ein Leben rund zwei bis drei. */
+    PRICE_ROCKET: 45,
+    PRICE_BOMB: 70,
+    PRICE_MOVES: 90,
+    PRICE_SHUFFLE: 140,
+    PRICE_LIFE: 170,
 
     /* Startausstattung fuer neue Spieler — einmal jedes Power-Up zum
        Ausprobieren, sonst versteht niemand, wofuer die Kristalle gut sind. */
-    STARTING_POWERUPS: { hammer: 1, shuffle: 1, moves: 1 },
+    STARTING_POWERUPS: { bomb: 1, rocket: 1, shuffle: 1, moves: 1 },
 
     /* --------------------------------------------------------------- Leben */
     /* Alle 30 Minuten kommt ein Herz zurueck. */
@@ -112,6 +135,9 @@
        eigenen Schluessel und bleiben davon unberuehrt. */
     STORE_PROGRESS: 'gemcascade.progress.v2',
     STORE_LIFETIME: 'gemcascade.lifetime.v1',
+    /* Die Einrichtung haengt an einem eigenen Schluessel: ein Reset des
+       Levelfortschritts soll das Schloss nicht mit abreissen. */
+    STORE_ROOMS: 'gemcascade.rooms.v1',
     STORE_PENDING: 'gemcascade.pending.v1'
   };
 

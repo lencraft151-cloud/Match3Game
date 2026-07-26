@@ -111,13 +111,14 @@ section('Tageswechsel');
 
 {
   /* Gestern aufgebraucht -> heute wieder voll. */
-  loadWith({ crystals: 10, lives: 0, day: yesterdayKey(), powerups: { hammer: 0, shuffle: 0, moves: 0 } });
+  loadWith({ crystals: 10, lives: 0, day: yesterdayKey(),
+    powerups: { bomb: 0, rocket: 0, shuffle: 0, moves: 0 } });
 
   const p = Player.snapshot();
   check('Neuer Tag stellt die Leben her', p.lives === CONFIG.MAX_LIVES, String(p.lives));
   check('Kristalle ueberleben den Tageswechsel', p.crystals === 10);
   check('Power-Ups ueberleben den Tageswechsel',
-    p.powerups.hammer === 0 && p.powerups.shuffle === 0);
+    p.powerups.bomb === 0 && p.powerups.shuffle === 0);
 }
 
 {
@@ -316,15 +317,15 @@ section('Einkaeufe');
 {
   fresh();
 
-  const broke = Player.buyPowerUp('hammer');
+  const broke = Player.buyPowerUp('bomb');
   check('Ohne Guthaben kein Power-Up', !broke.ok);
 
-  Player.earn(CONFIG.PRICE_HAMMER);
-  const start = Player.countOf('hammer');
-  const bought = Player.buyPowerUp('hammer');
+  Player.earn(CONFIG.PRICE_BOMB);
+  const start = Player.countOf('bomb');
+  const bought = Player.buyPowerUp('bomb');
 
   check('Power-Up gekauft', bought.ok);
-  check('Vorrat gewachsen', Player.countOf('hammer') === start + 1);
+  check('Vorrat gewachsen', Player.countOf('bomb') === start + 1);
   check('Kristalle abgebucht', Player.snapshot().crystals === 0);
 
   const nonsense = Player.buyPowerUp('laserkanone');
@@ -355,12 +356,12 @@ section('Kaputte Spielstaende');
 {
   /* Ein manipulierter oder halb geschriebener Eintrag darf das Spiel nicht
      lahmlegen — alles Unsinnige faellt auf sinnvolle Werte zurueck. */
-  loadWith({ crystals: 'viele', lives: 999, day: 42, powerups: { hammer: -5, shuffle: 'x' } });
+  loadWith({ crystals: 'viele', lives: 999, day: 42, powerups: { bomb: -5, shuffle: 'x' } });
 
   const p = Player.snapshot();
   check('Unsinnige Kristalle werden zu null', p.crystals === 0, String(p.crystals));
   check('Zu viele Leben werden gekappt', p.lives === CONFIG.LIVES_CAP, String(p.lives));
-  check('Negativer Vorrat wird zu null', p.powerups.hammer === 0, String(p.powerups.hammer));
+  check('Negativer Vorrat wird zu null', p.powerups.bomb === 0, String(p.powerups.bomb));
   check('Unsinniger Vorrat faellt auf den Startwert',
     p.powerups.shuffle === CONFIG.STARTING_POWERUPS.shuffle, String(p.powerups.shuffle));
 }
@@ -369,6 +370,75 @@ section('Kaputte Spielstaende');
   global.localStorage.setItem(KEY, '{kein json');
   const p = Player.load();
   check('Kaputtes JSON ergibt ein frisches Profil', p.lives === CONFIG.MAX_LIVES);
+}
+
+/* ========================================================================= */
+section('Vom Hammer zur Bombe');
+/* ========================================================================= */
+
+{
+  /* Der Hammer heisst jetzt Bombe. Ein alter Vorrat darf dabei nicht
+     verschwinden — gekaufte Gegenstaende einfach einzuziehen waere die
+     schlechteste Art, eine Umbenennung zu feiern. */
+  loadWith({ crystals: 0, lives: 3, powerups: { hammer: 4, shuffle: 2, moves: 1 } });
+
+  const p = Player.snapshot();
+  check('Alter Hammer-Vorrat wird zur Bombe', p.powerups.bomb === 4,
+    String(p.powerups.bomb));
+  check('Die uebrigen Vorraete bleiben', p.powerups.shuffle === 2 && p.powerups.moves === 1);
+  check('Die neue Rakete bekommt ihren Startwert',
+    p.powerups.rocket === CONFIG.STARTING_POWERUPS.rocket, String(p.powerups.rocket));
+}
+
+{
+  /* Wer schon Bomben hat, soll durch einen alten Hammer-Eintrag nichts
+     verlieren — die Bombe gewinnt. */
+  loadWith({ crystals: 0, lives: 3, powerups: { hammer: 4, bomb: 9 } });
+  check('Vorhandene Bomben werden nicht ueberschrieben',
+    Player.snapshot().powerups.bomb === 9, String(Player.snapshot().powerups.bomb));
+}
+
+/* ========================================================================= */
+section('Muenzen');
+/* ========================================================================= */
+
+{
+  loadWith({ crystals: 500, coins: 0, lives: 3 });
+
+  check('Frischer Stand hat keine Muenzen', Player.snapshot().coins === 0);
+
+  Player.earnCoins(120);
+  check('Muenzen kommen dazu', Player.snapshot().coins === 120,
+    String(Player.snapshot().coins));
+
+  check('Muenzen und Kristalle sind getrennte Toepfe',
+    Player.snapshot().crystals === 500, String(Player.snapshot().crystals));
+
+  check('Zu teuer wird abgelehnt', Player.spendCoins(300) === false);
+  check('Und dabei nichts abgebucht', Player.snapshot().coins === 120);
+
+  check('Bezahlbares geht durch', Player.spendCoins(100) === true);
+  check('Und wird abgebucht', Player.snapshot().coins === 20,
+    String(Player.snapshot().coins));
+
+  check('Kristalle bleiben davon unberuehrt', Player.snapshot().crystals === 500);
+
+  Player.earnCoins(-50);
+  check('Negativer Gewinn zieht nichts ab', Player.snapshot().coins === 20);
+
+  const reward = Player.coinsForLevel(1, 3);
+  check('Ein Level bringt Muenzen', reward > 0, String(reward));
+  check('Mehr Sterne bringen mehr Muenzen',
+    Player.coinsForLevel(1, 3) > Player.coinsForLevel(1, 1));
+  check('Spaetere Level bringen mehr Muenzen',
+    Player.coinsForLevel(20, 2) > Player.coinsForLevel(1, 2));
+}
+
+{
+  /* Ein kaputter Muenzstand darf nicht ins Minus rutschen. */
+  loadWith({ crystals: 0, lives: 3, coins: -900 });
+  check('Negativer Muenzstand wird zu null', Player.snapshot().coins === 0,
+    String(Player.snapshot().coins));
 }
 
 {

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="io.github.gemcascade"
+    android:versionCode="1"
+    android:versionName="1.0">
+
+  <!-- Bewusst keine Berechtigungen: das Spiel liegt vollstaendig in der App
+       und braucht weder Netz noch Speicher noch sonst etwas. -->
+
+  <uses-sdk android:minSdkVersion="23" android:targetSdkVersion="34" />
+
+  <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+
+  <application
+      android:label="@string/app_name"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher"
+      android:theme="@style/GemTheme"
+      android:hardwareAccelerated="true"
+      android:allowBackup="true"
+      android:supportsRtl="false">
+
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:screenOrientation="portrait"
+        android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout"
+        android:launchMode="singleTask">
+      <intent-filter>
+        <action android:name="android.intent.action.MAIN" />
+        <category android:name="android.intent.category.LAUNCHER" />
+      </intent-filter>
+    </activity>
+  </application>
+</manifest>
