@@ -44,6 +44,12 @@ jobs:
       - name: Level und Aufgaben
         run: node test/levels.test.js
 
+      - name: Erklaerkette im Uebungslevel
+        run: node test/tutorial.test.js
+
+      - name: Zimmer und Muenzen
+        run: node test/rooms.test.js
+
   deploy:
     name: Veroeffentlichen
     needs: test
@@ -57,13 +63,40 @@ jobs:
       - uses: actions/configure-pages@v5
 
       - name: Statische Dateien einsammeln
-        # Das Spiel braucht keinen Build. Server, Tests und Git-Interna
-        # gehoeren aber nicht auf die veroeffentlichte Seite.
+        # Das Spiel braucht keinen Build. Server, Tests, das Android-Projekt
+        # und Git-Interna gehoeren aber nicht auf die veroeffentlichte Seite.
+        #
+        # Bewusst eine Positivliste statt eines Ausschlusses: was neu
+        # dazukommt, faellt dann beim ersten Aufruf auf, statt still
+        # mitveroeffentlicht zu werden. Der Preis ist, dass neue Ordner hier
+        # eingetragen werden muessen — genau das ist beim Hinzufuegen von
+        # icons/ und download/ einmal vergessen worden.
         run: |
           mkdir -p _site
-          cp index.html _site/
-          cp -r css js _site/
-          cp README.md _site/
+          cp index.html manifest.webmanifest sw.js README.md _site/
+          cp -r css js icons download _site/
+          # Ohne .nojekyll verschluckt Pages Pfade, die mit einem Unterstrich
+          # beginnen, und laesst Jekyll unnoetig ueber die Dateien laufen.
+          touch _site/.nojekyll
+
+      - name: Gegenpruefen, dass alles Noetige drin ist
+        # Ein Download-Link, der ins Leere zeigt, faellt sonst erst dem
+        # Nutzer auf.
+        run: |
+          missing=""
+          for f in index.html manifest.webmanifest sw.js .nojekyll \
+                   css/style.css js/main.js js/rooms.js js/icons.js \
+                   icons/icon-192.png icons/icon-512.png \
+                   download/index.html download/GemCascade.apk \
+                   download/GemCascade.mobileconfig; do
+            [ -f "_site/$f" ] || missing="$missing $f"
+          done
+          if [ -n "$missing" ]; then
+            echo "Fehlt im Paket:$missing"
+            exit 1
+          fi
+          echo "Alle erwarteten Dateien sind da."
+          du -sh _site
 
       - uses: actions/upload-pages-artifact@v3
         with:
