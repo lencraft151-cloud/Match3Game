@@ -233,8 +233,34 @@
     game.startLevel(level);
     layoutBoard();
 
-    if (Levels.isTutorial(level)) Tutorial.start();
-    else Tutorial.stop();
+    /* Erst die Anzeige auf das Level einstellen, dann die Kette starten —
+       sie setzt als Erstes ihre eigene Sperre. */
+    UI.setPowerUnlimited(Levels.isTutorial(level));
+    UI.setPowerLock(false);
+
+    if (Levels.isTutorial(level)) {
+      startTutorial();
+    } else {
+      Tutorial.stop();
+      game.setGuide(null);
+    }
+  }
+
+  /* Die Erklaerkette bekommt genau die vier Faeden, die sie ins Spiel
+     braucht — mehr weiss tutorial.js nicht vom Rest. */
+  function startTutorial() {
+    Tutorial.start({
+      setGuide: function (mode, item) {
+        game.setGuide(mode, item);
+        UI.setPowerLock(!Tutorial.allows('power'));
+      },
+      goalDone: function () {
+        return root.M3.Goals.allDone(game.def.goals, game.progress);
+      },
+      finish: function () {
+        game.finishGuided();
+      }
+    });
   }
 
   var hooks = {
@@ -246,8 +272,20 @@
       }
     },
 
+    /* Der Riegel: solange die Erklaerkette laeuft, endet das Uebungslevel
+       nicht — auch wenn die Aufgabe laengst erfuellt ist. */
+    canComplete: function () {
+      return !Tutorial.isActive();
+    },
+
     onSwap: function () {
       Tutorial.notify('swap');
+    },
+
+    /* Die Fuehrung hat etwas abgewiesen. */
+    onGuideBlocked: function (text) {
+      UI.setHint(text, true);
+      Tutorial.nudge();
     },
 
     onHint: function (text, warn) {
@@ -293,8 +331,13 @@
     },
 
     onPowerUsed: function (key) {
-      Player.consume(key);
-      UI.refreshPowerBar();
+      /* Im Uebungslevel sind Power-Ups unbegrenzt — dort wird nichts vom
+         Vorrat abgezogen, sonst wuerde Ueben Geld kosten. */
+      if (!Levels.isTutorial(activeLevel)) {
+        Player.consume(key);
+        UI.refreshPowerBar();
+      }
+      Tutorial.notify('power');
     }
   };
 
@@ -350,9 +393,21 @@
       return;
     }
 
+    /* Waehrend eines Lese-Schritts im Uebungslevel sind die Power-Ups zu. */
+    if (!Tutorial.allows('power')) {
+      Audio.denied();
+      UI.setHint('Lies erst zu Ende — dann geht es weiter', true);
+      Tutorial.nudge();
+      return;
+    }
+
+    /* Im Uebungslevel gibt es sie unbegrenzt, damit Ausprobieren wirklich
+       nichts kostet. */
+    var free = Levels.isTutorial(activeLevel);
+
     /* Leerer Vorrat darf nicht einfach wirkungslos verpuffen — sonst wirkt
        der Knopf kaputt statt leer. */
-    if (Player.countOf(key) <= 0) {
+    if (!free && Player.countOf(key) <= 0) {
       UI.setHint(Player.ITEMS[key].name + ' aufgebraucht — im Shop nachkaufen für ' +
         Player.ITEMS[key].price + ' Kristalle', true);
       return;

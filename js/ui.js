@@ -192,6 +192,10 @@
   /* Leere Power-Ups werden ausgegraut, bleiben aber anklickbar: nur so kann
      das Spiel erklaeren, dass der Vorrat alle ist und was Nachschub kostet.
      Ein deaktivierter Knopf sagt gar nichts. */
+  /* Im Uebungslevel sind Power-Ups unbegrenzt: dann steht dort kein Zaehler,
+     sondern ein Unendlich-Zeichen, und leer kann nichts sein. */
+  var powerUnlimited = false;
+
   UI.refreshPowerBar = function () {
     var p = Player.snapshot();
 
@@ -199,12 +203,32 @@
       var count = p.powerups[key] || 0;
       var button = els.powerButtons[key];
 
+      if (powerUnlimited) {
+        els.powerCounts[key].textContent = '∞';
+        button.classList.remove('is-empty');
+        button.title = Player.ITEMS[key].hint + ' — im Übungslevel unbegrenzt';
+        return;
+      }
+
       els.powerCounts[key].textContent = count;
       button.classList.toggle('is-empty', count <= 0);
       button.title = count > 0
         ? Player.ITEMS[key].hint
         : Player.ITEMS[key].name + ' aufgebraucht — im Shop für ' +
           Player.ITEMS[key].price + ' Kristalle nachkaufen';
+    });
+  };
+
+  UI.setPowerUnlimited = function (value) {
+    powerUnlimited = !!value;
+    UI.refreshPowerBar();
+  };
+
+  /* Gesperrt heisst matt, aber weiterhin anklickbar — der Klick erklaert,
+     warum gerade nichts geht. Ein toter Knopf erklaert nichts. */
+  UI.setPowerLock = function (locked) {
+    Player.ITEM_KEYS.forEach(function (key) {
+      els.powerButtons[key].classList.toggle('is-locked', !!locked);
     });
   };
 

@@ -737,6 +737,18 @@ body.is-muted .icon-btn__off { display: inline; }
   color: var(--ink-dim);
 }
 
+/* Waehrend eines Lese-Schritts im Uebungslevel: matt und ohne Hover, aber
+   weiterhin anklickbar — der Klick sagt, dass erst der Text dran ist. */
+.power.is-locked {
+  opacity: 0.4;
+  filter: saturate(0.35);
+}
+
+.power.is-locked:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.2));
+}
+
 body.is-arming #board-canvas { cursor: crosshair; }
 
 /* ------------------------------------------------------- Tutorial-Blase */
@@ -744,9 +756,14 @@ body.is-arming #board-canvas { cursor: crosshair; }
 .tutorial {
   flex: 0 0 auto;
   width: min(560px, 100%);
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "step next"
+    "text next";
   align-items: center;
-  gap: 12px;
+  column-gap: 12px;
+  row-gap: 3px;
   padding: 13px 15px;
   border-radius: var(--radius-sm);
   border: 2px solid var(--gold);
@@ -760,8 +777,22 @@ body.is-arming #board-canvas { cursor: crosshair; }
   to   { opacity: 1; transform: none; }
 }
 
+/* Zeigt, dass der Text ein Ende hat — ohne Zaehler wirkt eine Erklaerkette
+   laenger, als sie ist. */
+.tutorial__step {
+  grid-area: step;
+  margin: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: 0.85;
+  text-align: left;
+}
+
 .tutorial__text {
-  flex: 1 1 auto;
+  grid-area: text;
   margin: 0;
   font-size: 14px;
   line-height: 1.45;
@@ -771,9 +802,25 @@ body.is-arming #board-canvas { cursor: crosshair; }
 .tutorial__text b { color: var(--gold); }
 
 .tutorial__next {
-  flex: 0 0 auto;
+  grid-area: next;
+  align-self: center;
   padding: 10px 18px;
   font-size: 14px;
+}
+
+/* Der Spieler hat etwas versucht, das dieser Schritt nicht vorsieht: die
+   Blase meldet sich kurz, statt dass der Klick spurlos verpufft. */
+.tutorial.is-nudged {
+  animation: tutorial-nudge 0.42s ease-in-out;
+}
+
+@keyframes tutorial-nudge {
+  0%, 100% { transform: translateX(0); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(6px); }
+  60%      { transform: translateX(-4px); }
+  80%      { transform: translateX(4px); }
+  50%      { box-shadow: 0 0 0 5px rgba(255, 201, 60, 0.35); }
 }
 
 /* ------------------------------------------------------------ Aufgabenkarten */

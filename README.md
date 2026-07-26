@@ -30,6 +30,14 @@ Ganz unten auf der **Landkarte** sitzt der **?**-Knoten: ein Übungslevel
 **ohne Zuglimit**, das kein Leben kostet, sich nicht verlieren lässt und das
 Spiel Schritt für Schritt erklärt. Es bleibt dauerhaft offen.
 
+Das Übungslevel **führt**, statt nur nebenher zu erklären. Neun Schritte, und
+in jedem geht genau das, was der Text gerade verlangt: beim Lesen liegt ein
+Schleier über dem Brett, beim Tauschen leuchtet **ein bestimmtes Paar** und
+alles andere federt mit einer Begründung zurück, beim Power-Up-Schritt musst
+du den Hammer wirklich einsetzen — er ist dort wie alle Power-Ups
+**unbegrenzt** und kostet nichts vom Vorrat. Abgeschlossen ist es erst, wenn
+der Text durch ist: eine früh nebenbei erfüllte Aufgabe beendet es nicht.
+
 Darüber liegen die Level als Bahn aus nummerierten Knoten. Zu Beginn ist nur
 Level 1 offen; jedes geschaffte Level schaltet genau eines frei. Das aktuelle trägt eine Krone, geschaffte zeigen ihre Sterne und
 lassen sich für fehlende Sterne wiederholen, der Rest ist gesperrt. Ein Tipp auf den Knoten öffnet die Levelkarte mit Aufgabe und
@@ -187,6 +195,7 @@ späten Leveln unerreichbar.
 node test/board.test.js     # 43 Prüfungen — Spielfeldlogik
 node test/player.test.js    # 57 Prüfungen — Leben, Kristalle, Käufe
 node test/levels.test.js    # 41 Prüfungen — Level, Aufgaben, Übungslevel
+node test/tutorial.test.js  # 35 Prüfungen — Erklärkette im Übungslevel
 ```
 
 Ohne Framework und ohne Browser.
@@ -201,6 +210,10 @@ Kristallberechnung, Käufe samt Obergrenzen und manipulierte Spielstände.
 `levels.test.js` prüft vor allem, dass **kein Level unlösbar** ist: keine
 Sammelaufgabe auf eine Farbe, die es im Level nicht gibt, und keine
 Felsaufgabe über der Zahl der gesetzten Felsen.
+
+`tutorial.test.js` prüft die beiden Zusagen des Übungslevels: es endet **erst,
+wenn der Text durch ist** — auch wenn die Aufgabe schon vorher erfüllt wurde —
+und jeder Schritt sperrt, was er nicht verlangt.
 
 ## Aufbau
 

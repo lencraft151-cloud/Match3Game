@@ -107,6 +107,7 @@
     this.armed = null;         /* scharfes Power-Up, aktuell nur 'hammer' */
     this.hint = null;
     this.idleTime = 0;
+    this.guide = null;         /* Fuehrung im Uebungslevel, sonst immer null */
 
     this.popping = [];         /* Steine in der Auflös-Animation */
     this.falling = [];
@@ -190,6 +191,7 @@
     this.armed = null;
     this.hint = null;
     this.idleTime = 0;
+    this.guide = null;
     this.popping.length = 0;
     this.falling.length = 0;
     this.swapAnim = null;
@@ -250,6 +252,103 @@
   };
 
   /* ====================================================================== */
+  /*  Gefuehrte Schritte                                                    */
+  /* ====================================================================== */
+
+  /* Im Uebungslevel fuehrt tutorial.js durch eine Erklaerkette. Damit immer
+     nur das geht, was der Text gerade verlangt, sperrt `guide` alles andere:
+
+       null      freies Spiel — der Zustand jedes regulaeren Levels
+       'read'    Brett gesperrt, es zaehlt nur der Weiter-Knopf
+       'swap'    nur der eine markierte Tausch
+       'power'   keine Tausche, dafuer ein bestimmtes Power-Up
+
+     Reguläre Level setzen nie eine Fuehrung, dort faellt jede Pruefung hier
+     sofort durch. */
+  var GUIDE_HINTS = {
+    read: 'Lies erst zu Ende — dann geht es weiter',
+    swap: 'Nimm die beiden markierten Steine',
+    power: 'Tippe das Power-Up unter dem Brett an'
+  };
+
+  /* Die Fusszeile sagt bei jedem Schrittwechsel, was jetzt dran ist. Ohne das
+     bliebe dort die Abweisung des vorigen Schritts stehen und widerspraeche
+     dem Text in der Blase. */
+  var GUIDE_LEADS = {
+    read: 'Lies den Text — weiter geht es mit dem Knopf',
+    swap: 'Ziehe die beiden markierten Steine zusammen',
+    power: 'Tippe das Power-Up unter dem Brett an'
+  };
+
+  Game.prototype.setGuide = function (mode, item) {
+    this.selected = null;
+    this.dragOrigin = null;
+    this.hint = null;
+
+    if (mode !== 'power') this.disarm();
+
+    if (!mode) {
+      this.guide = null;
+      this.say('Ziehe oder tippe zwei benachbarte Steine');
+      return;
+    }
+
+    this.guide = { mode: mode, item: item || null, a: null, b: null };
+    if (mode === 'swap') this.refreshGuide();
+    this.say(GUIDE_LEADS[mode] || '');
+  };
+
+  /* Sucht das Paar, das im Tausch-Schritt leuchtet. Nach jeder Kaskade und
+     jedem Mischen neu — sonst zeigt die Markierung auf Steine, die laengst
+     woanders liegen. */
+  Game.prototype.refreshGuide = function () {
+    if (!this.guide || this.guide.mode !== 'swap' || !this.board) return;
+
+    var pair = this.board.findHint();
+    this.guide.a = pair ? pair.a : null;
+    this.guide.b = pair ? pair.b : null;
+  };
+
+  /* Eine Abweisung ist nie ein stilles Nichts: sie sagt, was stattdessen
+     dran ist. */
+  Game.prototype.refuse = function (mode) {
+    var text = GUIDE_HINTS[mode] || GUIDE_HINTS.read;
+    Audio.denied();
+    this.say(text, true);
+    if (this.hooks.onGuideBlocked) this.hooks.onGuideBlocked(text);
+    return false;
+  };
+
+  Game.prototype.guideAllowsSwap = function (a, b) {
+    if (!this.guide) return true;
+    if (this.guide.mode !== 'swap') return false;
+    return (a === this.guide.a && b === this.guide.b) ||
+           (a === this.guide.b && b === this.guide.a);
+  };
+
+  Game.prototype.guideAllowsPower = function (key) {
+    if (!this.guide) return true;
+    if (this.guide.mode !== 'power') return false;
+    return !this.guide.item || this.guide.item === key;
+  };
+
+  /* Die Erklaerkette ist durch — erst jetzt darf das Uebungslevel enden.
+     Die Fuehrung wird hier direkt geloescht statt ueber setGuide: eine
+     Spielanleitung in der Fusszeile waere eine Sekunde vor dem Sieg-Popup
+     nur noch Rauschen. */
+  Game.prototype.finishGuided = function () {
+    this.guide = null;
+    this.selected = null;
+    this.dragOrigin = null;
+
+    if (!this.running) return false;
+    if (!Goals.allDone(this.def.goals, this.progress)) return false;
+
+    this.startFinale();
+    return true;
+  };
+
+  /* ====================================================================== */
   /*  Eingabe                                                               */
   /* ====================================================================== */
 
@@ -262,6 +361,22 @@
 
     var idx = this.cellAtPixel(px, py);
     if (idx === null) return;
+
+    /* Gefuehrter Schritt: alles ausser dem Verlangten wird abgewiesen. */
+    if (this.guide) {
+      if (this.guide.mode === 'read') {
+        this.refuse('read');
+        return;
+      }
+      if (this.guide.mode === 'power' && this.armed !== 'hammer') {
+        this.refuse('power');
+        return;
+      }
+      if (this.guide.mode === 'swap' && idx !== this.guide.a && idx !== this.guide.b) {
+        this.refuse('swap');
+        return;
+      }
+    }
 
     /* Scharfer Hammer: der Tipp schlaegt zu, statt zu tauschen. */
     if (this.armed === 'hammer') {
@@ -340,6 +455,14 @@
   Game.prototype.keyDown = function (key) {
     if (!this.acceptsInput()) return false;
 
+    /* Im Lese- und Power-Schritt ist das Brett gesperrt. Der Tastendruck wird
+       trotzdem geschluckt, damit die Pfeiltasten nicht die Seite scrollen —
+       die Rueckmeldung kommt bei Leertaste und Eingabe. */
+    if (this.guide && this.guide.mode !== 'swap') {
+      if (key === ' ' || key === 'Enter') this.refuse(this.guide.mode);
+      return true;
+    }
+
     if (this.cursor === null) this.cursor = this.board.idx(0, this.rows - 1);
 
     var c = this.board.colOf(this.cursor);
@@ -373,6 +496,12 @@
     }
 
     if (key === ' ' || key === 'Enter') {
+      /* Im Tausch-Schritt sind nur die beiden markierten Felder waehlbar. */
+      if (this.guide && this.cursor !== this.guide.a && this.cursor !== this.guide.b) {
+        this.refuse('swap');
+        return true;
+      }
+
       if (this.selected === this.cursor) {
         this.selected = null;
       } else {
@@ -398,6 +527,7 @@
      sofort. */
   Game.prototype.armHammer = function () {
     if (!this.acceptsInput()) return false;
+    if (!this.guideAllowsPower('hammer')) return this.refuse(this.guide.mode);
 
     this.armed = 'hammer';
     this.selected = null;
@@ -456,6 +586,7 @@
 
   Game.prototype.usePowerShuffle = function () {
     if (!this.acceptsInput()) return false;
+    if (!this.guideAllowsPower('shuffle')) return this.refuse(this.guide.mode);
     this.disarm();
     this.startShuffle('Feld neu gemischt — jetzt gibt es wieder Zuege',
       CONFIG.POWERUP_SHUFFLE_MIN_MOVES);
@@ -465,6 +596,7 @@
 
   Game.prototype.usePowerMoves = function () {
     if (!this.running) return false;
+    if (!this.guideAllowsPower('moves')) return this.refuse(this.guide.mode);
     this.addMoves(CONFIG.POWERUP_EXTRA_MOVES);
     this.spent('moves');
     return true;
@@ -495,6 +627,13 @@
 
   Game.prototype.tryMove = function (a, b) {
     if (!this.board.canSwap(a, b)) return;
+
+    /* Rueckfalltuer der Fuehrung: Ziehen, Antippen und Tastatur laufen alle
+       hier zusammen, also wird hier auch abschliessend geprueft. */
+    if (!this.guideAllowsSwap(a, b)) {
+      this.refuse(this.guide.mode);
+      return;
+    }
 
     var ga = this.board.cells[a];
     var gb = this.board.cells[b];
@@ -837,7 +976,11 @@
       return;
     }
 
-    if (Goals.allDone(this.def.goals, this.progress)) {
+    /* Aufgaben erfuellt — aber im Uebungslevel darf das Level erst enden,
+       wenn die Erklaerkette durch ist. Sagt canComplete nein, laeuft das
+       Spiel einfach weiter, statt zu gewinnen. */
+    if (Goals.allDone(this.def.goals, this.progress) &&
+        (!this.hooks.canComplete || this.hooks.canComplete())) {
       this.startFinale();
       return;
     }
@@ -854,6 +997,7 @@
 
     this.idleTime = 0;
     this.hint = null;
+    this.refreshGuide();
     this.setPhase(PHASE.IDLE);
   };
 
@@ -1074,7 +1218,9 @@
 
       case PHASE.IDLE:
         this.idleTime += dt;
-        if (this.idleTime > HINT_DELAY && !this.hint) {
+        /* Waehrend einer Fuehrung schweigt der Leerlauf-Tipp — die
+           Markierung ist der Tipp. */
+        if (this.idleTime > HINT_DELAY && !this.hint && !this.guide) {
           this.hint = this.board.findHint();
           if (this.hint) this.say('Tipp: dieser Zug geht');
         }
@@ -1228,6 +1374,7 @@
     this.drawGems(ctx, time);
     this.drawPopping(ctx);
     this.fx.draw(ctx);
+    this.drawVeil(ctx);
     this.drawSelection(ctx, time);
 
     ctx.restore();
@@ -1350,6 +1497,20 @@
     ctx.restore();
   };
 
+  /* Im Lese-Schritt liegt ein Schleier ueber dem Brett: "jetzt nicht" muss
+     man sehen, nicht erst durch Antippen merken. Erst wenn das Brett zur
+     Ruhe gekommen ist — eine Kaskade unter einem Schleier ablaufen zu lassen
+     waere schade um die Animation, die der Text gerade erklaert. */
+  Game.prototype.drawVeil = function (ctx) {
+    if (!this.guide || this.guide.mode !== 'read') return;
+    if (this.phase !== PHASE.IDLE) return;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(9, 20, 58, 0.52)';
+    ctx.fillRect(0, 0, this.cssSize, this.cssSize);
+    ctx.restore();
+  };
+
   Game.prototype.drawSelection = function (ctx, time) {
     var cell = this.cell;
     var pulse = 0.5 + 0.5 * Math.sin(time * 5);
@@ -1366,6 +1527,67 @@
       var glow = 0.25 + pulse * 0.5;
       this.strokeCell(ctx, this.hint.a, '#ffcc4d', 3, glow);
       this.strokeCell(ctx, this.hint.b, '#ffcc4d', 3, glow);
+    }
+
+    /* Der eine Zug, den der Erklaertext gerade verlangt. */
+    if (this.guide && this.guide.mode === 'swap' && this.guide.a !== null &&
+        this.phase === PHASE.IDLE) {
+      var beat = this.reducedMotion ? 0.6 : pulse;
+      this.strokeCell(ctx, this.guide.a, '#ffcc4d', 4, 0.55 + beat * 0.45);
+      this.strokeCell(ctx, this.guide.b, '#ffcc4d', 4, 0.55 + beat * 0.45);
+      this.drawGuideArrow(ctx, beat);
+    }
+  };
+
+  /* Doppelpfeil zwischen den markierten Feldern — er sagt "diese zwei
+     tauschen" deutlicher als zwei Rahmen allein. */
+  Game.prototype.drawGuideArrow = function (ctx, beat) {
+    var a = this.cellCenter(this.board.colOf(this.guide.a), this.board.rowOf(this.guide.a));
+    var b = this.cellCenter(this.board.colOf(this.guide.b), this.board.rowOf(this.guide.b));
+
+    var dx = b.x - a.x;
+    var dy = b.y - a.y;
+    var len = Math.sqrt(dx * dx + dy * dy) || 1;
+    var ux = dx / len;
+    var uy = dy / len;
+
+    /* Der Pfeil sitzt zwischen den Rahmen und atmet leicht mit. */
+    var gap = this.cell * (0.24 + beat * 0.05);
+    var head = this.cell * 0.13;
+
+    var ax = a.x + ux * gap;
+    var ay = a.y + uy * gap;
+    var bx = b.x - ux * gap;
+    var by = b.y - uy * gap;
+
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = '#ffe9a8';
+    ctx.lineWidth = Math.max(2, this.cell * 0.06);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = '#ffcc4d';
+
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+
+    arrowHead(ax, ay, -ux, -uy);
+    arrowHead(bx, by, ux, uy);
+    ctx.restore();
+
+    /* Spitze an der Stelle (x, y), zeigt in Richtung (dirx, diry). */
+    function arrowHead(x, y, dirx, diry) {
+      var px = -diry;
+      var py = dirx;
+
+      ctx.beginPath();
+      ctx.moveTo(x - dirx * head + px * head, y - diry * head + py * head);
+      ctx.lineTo(x, y);
+      ctx.lineTo(x - dirx * head - px * head, y - diry * head - py * head);
+      ctx.stroke();
     }
   };
 
