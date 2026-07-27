@@ -540,7 +540,7 @@
   UI.showWin = function (data, crystals, coins) {
     els.winScore.textContent = '0';
     els.winMoves.textContent = data.movesLeft;
-    els.winCrystals.textContent = '+0 💎';
+    els.winCrystals.textContent = '+0';
 
     /* Die Muenzzeile steht nur da, wenn es welche gab — im Uebungslevel
        gibt es keine, und eine Zeile mit "+0" waere dort nur verwirrend. */
@@ -567,7 +567,7 @@
     root.setTimeout(function () {
       countUp(els.winScore, data.levelScore, 900);
       countUp(els.winCrystals, crystals, 900, function (v) {
-        return '+' + Utils.formatNumber(v) + ' 💎';
+        return '+' + Utils.formatNumber(v);
       });
       if (coins) {
         countUp(els.winCoins, coins, 900, function (v) {

@@ -183,9 +183,16 @@
     <dl class="tally">
       <div class="tally__row"><dt>Punkte</dt><dd id="win-score">0</dd></div>
       <div class="tally__row"><dt>Züge übrig</dt><dd id="win-moves">0</dd></div>
-      <div class="tally__row tally__row--crystals"><dt>Kristalle</dt><dd id="win-crystals">+0</dd></div>
+      <!-- Das Symbol steht bei der Beschriftung, nicht beim Wert: der Wert
+           wird hochgezaehlt und dabei ueberschrieben, ein Bild darin waere
+           beim ersten Tick weg. -->
+      <div class="tally__row tally__row--crystals">
+        <dt>Kristalle<span class="cost-icon" data-icon="crystal"></span></dt>
+        <dd id="win-crystals">+0</dd>
+      </div>
       <div class="tally__row tally__row--coins" id="win-coin-row">
-        <dt>Münzen fürs Schloss</dt><dd id="win-coins">+0</dd>
+        <dt>Münzen fürs Schloss<span class="cost-icon" data-icon="coin"></span></dt>
+        <dd id="win-coins">+0</dd>
       </div>
     </dl>
 
