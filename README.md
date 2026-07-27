@@ -175,10 +175,43 @@ ersetzbar. **Mischen** holt dich aus einer Sackgasse, in der sonst gar nichts
 mehr geht — das ist der Posten, der ein Level rettet, und deshalb der teuerste
 Booster. Darüber liegt nur noch das **Leben** selbst.
 
-Die vier Booster liegen als Leiste unter dem Brett und **kosten selbst keinen
-Zug**. Rakete und Bombe brauchen ein Ziel: erst antippen, dann das Feld wählen
-— ein zweiter Tipp auf den Knopf entschärft sie wieder. Ist ein Vorrat leer,
-bleibt der Knopf antippbar und sagt dir unter dem Brett, was Nachschub kostet.
+Die vier Booster liegen als runde Knöpfe unter dem Brett und **kosten selbst
+keinen Zug**. Rakete und Bombe brauchen ein Ziel: erst antippen, dann das Feld
+wählen — ein zweiter Tipp auf den Knopf entschärft sie wieder. Ist ein Vorrat
+leer, zeigt die Anzahl-Blase ein **+** und der Knopf führt direkt in den Shop;
+zurück geht es ins laufende Level, nicht auf die Karte.
+
+## Wie das Ganze aussieht
+
+Die Oberfläche folgt der Formensprache großer Handy-Match-3-Spiele: dicke
+Knöpfe mit sichtbarer Unterkante, die beim Drücken um genau diese Kante
+einsinken, Umriss-Schrift, die auf jedem Untergrund lesbar bleibt,
+Bannerbögen über der Panelkante und ein Brettrahmen mit Nieten in den Ecken.
+Die Farben bleiben Königsblau und Gold.
+
+Zwei Dinge daran sind mehr als Kosmetik:
+
+**Kein einziges Emoji.** Jedes Symbol — Herz, Kristall, Münze, Zahnrad,
+Booster, Sterne auf der Karte — wird in
+[`js/icons.js`](js/icons.js) auf ein Canvas gezeichnet. Emojis sehen auf
+jedem Gerät anders aus und tragen eine fremde Formensprache ins Spiel; neben
+einem selbstgezeichneten Rubin wirkt ein 🔨 wie ein Aufkleber auf einem
+Gemälde.
+
+**Eine Kulisse hinter dem Brett.** Jedes der sechs Brett-Themen bekommt einen
+eigenen Raum: Sandsteinhalle mit Rüstung, Bibliothek mit Springbrunnen,
+Heckengarten mit Bank. Gezeichnet wird das nicht neu —
+[`js/scene.js`](js/scene.js) benutzt dieselben Wände, Böden, Lichter und
+Möbel, die [`js/roomart.js`](js/roomart.js) für das Schloss malt. Der Raum
+wird einmal je Thema und Breite in einen Puffer gemalt und danach nur noch
+kopiert; jeden Frame eine Mauer neu zu mauern wäre Verschwendung. Ein
+Themenwechsel blendet über, außer man hat Bewegung abbestellt.
+
+Dass die Zuordnung Thema → Raum stimmt, prüft
+[`test/scene.test.js`](test/scene.test.js) gegen die echten Tabellen. Ein
+Tippfehler in einem Schlüssel fiele beim Zeichnen sonst nicht auf: die
+Schicht würde stillschweigend übersprungen, und die leere Wand müsste man in
+dem einen von sechs Themen suchen, das nur alle vier Level drankommt.
 
 ## Das Schloss einrichten
 
@@ -256,11 +289,12 @@ späten Leveln unerreichbar.
 ## Tests
 
 ```bash
-node test/board.test.js     # 43 Prüfungen — Spielfeldlogik
+node test/board.test.js     # 46 Prüfungen — Spielfeldlogik
 node test/player.test.js    # 74 Prüfungen — Leben, Kristalle, Münzen, Käufe
 node test/levels.test.js    # 44 Prüfungen — Level, Aufgaben, Übungslevel
 node test/tutorial.test.js  # 35 Prüfungen — Erklärkette im Übungslevel
 node test/rooms.test.js     # 36 Prüfungen — Zimmer, Freischaltung, Preise
+node test/scene.test.js     # 66 Prüfungen — Kulisse je Brett-Thema
 ```
 
 Ohne Framework und ohne Browser.
@@ -296,9 +330,10 @@ js/board.js         Spielfeldlogik — ohne DOM, in Node testbar
 js/game.js          Zustandsautomat, Züge, Animationen, Canvas-Rendering
 js/map.js           Level-Landkarte
 js/tutorial.js      Erklärschritte im Übungslevel
-js/icons.js         Booster-Symbole, gezeichnet statt Emoji
+js/icons.js         Alle Symbole, gezeichnet statt Emoji
 js/rooms.js         Zimmer, Aufgaben und Preise — ohne DOM, in Node testbar
 js/roomart.js       Die Zimmer auf Canvas malen
+js/scene.js         Die Kulisse hinter dem Spielfeld, ein Raum je Thema
 js/leaderboard.js   Online-Client mit lokalem Fallback
 js/ui.js            Screens, HUD, Popups
 js/main.js          Bootstrap, Eingabe, Ablaufsteuerung

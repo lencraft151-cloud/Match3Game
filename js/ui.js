@@ -16,8 +16,10 @@
   var Player = root.M3.Player;
   var Audio = root.M3.Audio;
   var Icons = root.M3.Icons;
+  var Levels = root.M3.Levels;
   var Rooms = root.M3.Rooms;
   var RoomArt = root.M3.RoomArt;
+  var Scene = root.M3.Scene;
 
   var doc = root.document;
 
@@ -48,6 +50,7 @@
 
     /* Spiel-HUD */
     els.hudMoves = $('hud-moves');
+    els.hudLevel = $('hud-level');
     els.movesBox = $('moves-box');
     els.goalList = $('goal-list');
     els.hint = $('game-hint');
@@ -101,6 +104,30 @@
     /* Power-Leiste — aus den Item-Daten gebaut. */
     buildPowerBar($('powerbar'));
 
+    /* Alle Knopf- und Anzeigesymbole werden gezeichnet wie die Steine auch,
+       statt als Emoji dazustehen. An einer Stelle aufgezaehlt, damit keins
+       vergessen wird. */
+    [
+      ['btn-pause', 'gear', 22], ['btn-rooms', 'castle', 22],
+      ['btn-shop', 'cart', 22], ['btn-scores', 'trophy', 22],
+      ['btn-map-help', 'help', 22]
+    ].forEach(function (spec) {
+      var el = $(spec[0]);
+      if (el) el.appendChild(Icons.element(spec[1], spec[2], 'icon-btn__art'));
+    });
+
+    [['crystal-stat', 'crystal'], ['coin-stat', 'coin']].forEach(function (spec) {
+      var el = $(spec[0]);
+      if (el) el.insertBefore(Icons.element(spec[1], 20, 'stat__art'), el.firstChild);
+    });
+
+    /* Preise und Kosten im Fliesstext: `data-icon` sagt, welches Symbol
+       dahinter gehoert. So steht im HTML, wo eins hinkommt, und hier, wie
+       es gezeichnet wird — kein Emoji dazwischen. */
+    Array.prototype.forEach.call(doc.querySelectorAll('.cost-icon'), function (el) {
+      el.appendChild(Icons.element(el.dataset.icon, 16, 'inline-art'));
+    });
+
     /* Zimmer */
     els.roomName = $('room-name');
     els.roomLead = $('room-lead');
@@ -131,6 +158,10 @@
       screen.classList.toggle('is-active', screen.id === id);
     });
     currentScreen = id;
+
+    /* Die Kulisse gehoert zum Spielen. Auf Titel, Karte und Shop wuerde ein
+       Raum hinter einem Panel nur unruhig wirken. */
+    Scene.setActive(id === 'screen-game');
   };
 
   UI.overlay = function (id, visible) {
@@ -156,21 +187,24 @@
     var shownHearts = Math.min(lives, maxLives);
     var i;
 
-    for (i = 0; i < shownHearts; i++) target.appendChild(heartSpan('♥', 'heart--full'));
-    for (i = shownHearts; i < maxLives; i++) target.appendChild(heartSpan('♡', 'heart--empty'));
+    for (i = 0; i < shownHearts; i++) target.appendChild(heartSpan('heart--full'));
+    for (i = shownHearts; i < maxLives; i++) target.appendChild(heartSpan('heart--empty'));
 
     if (lives > maxLives) {
       var extra = doc.createElement('span');
-      extra.className = 'heart--full';
-      extra.textContent = ' +' + (lives - maxLives);
+      extra.className = 'heart--extra';
+      extra.textContent = '+' + (lives - maxLives);
       target.appendChild(extra);
     }
   }
 
-  function heartSpan(glyph, cls) {
+  /* Ein gezeichnetes Herz. Ein leeres ist dasselbe Herz, nur ausgegraut —
+     ein hohles Zeichen (♡) sah neben dem vollen aus wie ein anderes Symbol
+     und nicht wie dasselbe in leer. */
+  function heartSpan(cls) {
     var span = doc.createElement('span');
     span.className = cls;
-    span.textContent = glyph;
+    span.appendChild(Icons.element('heart', 16, 'heart__art'));
     return span;
   }
 
@@ -208,9 +242,14 @@
 
   /* -------------------------------------------------------- Power-Leiste */
 
-  /* Baut die Karten aus Player.ITEMS. Name, Wirkung, Preis und Symbol stehen
-     damit an genau einer Stelle — frueher standen sie zusaetzlich im HTML und
-     liefen bei jeder Aenderung auseinander. */
+  /* Baut die Booster-Knoepfe aus Player.ITEMS. Name, Wirkung, Preis und
+     Symbol stehen damit an genau einer Stelle — frueher standen sie
+     zusaetzlich im HTML und liefen bei jeder Aenderung auseinander.
+
+     Die Knoepfe sind rund und tragen nur ihr Symbol. Der Name stand frueher
+     mit darauf und hat vier Karten so breit gemacht, dass sie den halben
+     Platz unter dem Brett gefressen haben — jetzt sagt ihn der Hinweis,
+     wenn man den Knopf antippt. */
   function buildPowerBar(bar) {
     els.powerButtons = {};
     els.powerCounts = {};
@@ -223,18 +262,11 @@
       button.type = 'button';
       button.id = 'pw-' + key;
       button.className = 'power power--' + key;
+      button.setAttribute('aria-label', item.name + ' — ' + item.effect);
 
       var badge = doc.createElement('span');
       badge.className = 'power__badge';
-      badge.appendChild(Icons.element(item.art, 30, 'power__art'));
-
-      var name = doc.createElement('span');
-      name.className = 'power__name';
-      name.textContent = item.short || item.name;
-
-      var effect = doc.createElement('span');
-      effect.className = 'power__effect';
-      effect.textContent = item.effect;
+      badge.appendChild(Icons.element(item.art, 38, 'power__art'));
 
       var count = doc.createElement('span');
       count.className = 'power__count';
@@ -242,8 +274,6 @@
       count.textContent = '0';
 
       button.appendChild(badge);
-      button.appendChild(name);
-      button.appendChild(effect);
       button.appendChild(count);
       bar.appendChild(button);
 
@@ -273,7 +303,9 @@
         return;
       }
 
-      els.powerCounts[key].textContent = count;
+      /* Leer heisst nicht "0", sondern "+": der Knopf soll sagen, was als
+         Naechstes zu tun ist, nicht nur, dass nichts da ist. */
+      els.powerCounts[key].textContent = count > 0 ? count : '+';
       button.classList.toggle('is-empty', count <= 0);
       button.title = count > 0
         ? Player.ITEMS[key].hint
@@ -316,6 +348,8 @@
   UI.updateStats = function (s) {
     if (s.level !== shown.level) {
       shown.level = s.level;
+      els.hudLevel.textContent = Levels.isTutorial(s.level)
+        ? 'Übung' : 'Level ' + s.level;
     }
 
     if (s.movesLeft !== shown.moves) {
@@ -420,16 +454,37 @@
 
   /* Der Rahmen des Bretts nimmt den Ton des Themas auf. Nur eine Variable —
        gezeichnet wird das Thema selbst in game.js. */
+  /* Der Ton des Levels faerbt den Rahmen, nicht das Brett: der Rahmen ist
+     das Element, das gross genug ist, dass man die Farbe ueberhaupt sieht. */
   UI.setBoardTheme = function (theme) {
-    var canvas = $('board-canvas');
-    if (!canvas || !theme) return;
-    canvas.style.setProperty('--board-tint', 'rgba(' + theme.tint + ', 0.3)');
-    canvas.dataset.theme = theme.key;
+    var frame = $('board-frame');
+    if (!frame || !theme) return;
+    frame.style.setProperty('--board-tint', 'rgba(' + theme.tint + ', 0.45)');
+    frame.style.setProperty('--board-tint-soft', 'rgba(' + theme.tint + ', 0.14)');
+    frame.dataset.theme = theme.key;
   };
 
+  /* Der Hinweis blendet sich ein und nach einigen Sekunden wieder aus. Ein
+     Text, der stehen bleibt, wird nach dem zweiten Blick nicht mehr gelesen
+     — und belegt trotzdem dauerhaft Platz. Ein leerer Text blendet sofort
+     aus, so kann der Aufrufer ihn auch von Hand wegnehmen. */
+  var hintTimer = 0;
+
   UI.setHint = function (text, warn) {
+    root.clearTimeout(hintTimer);
+
+    if (!text) {
+      els.hint.classList.remove('is-on');
+      return;
+    }
+
     els.hint.textContent = text;
     els.hint.classList.toggle('is-warn', !!warn);
+    els.hint.classList.add('is-on');
+
+    hintTimer = root.setTimeout(function () {
+      els.hint.classList.remove('is-on');
+    }, warn ? 4200 : 3200);
   };
 
   /* ----------------------------------------------------- Levelstart */
@@ -492,12 +547,15 @@
     els.winCoinRow.hidden = !coins;
     els.winCoins.textContent = '+0';
 
+    /* Drei gezeichnete Sterne im Bogen. Der mittlere ist groesser und sitzt
+       hoeher — die Anordnung, an der man ein geschafftes Level erkennt,
+       bevor man die Zahlen gelesen hat. */
     els.winStars.textContent = '';
     for (var i = 1; i <= 3; i++) {
       var star = doc.createElement('span');
       star.className = 'star' + (i <= data.stars ? ' is-on' : '');
       star.style.animationDelay = (i * 0.14) + 's';
-      star.textContent = '★';
+      star.appendChild(Icons.element('star', i === 2 ? 62 : 50, 'star__art'));
       els.winStars.appendChild(star);
     }
 
@@ -707,7 +765,7 @@
     els.shopList.textContent = '';
 
     els.shopList.appendChild(shopRow({
-      icon: '❤️',
+      art: 'heart',
       name: 'Extra-Leben',
       desc: 'Ein zusätzlicher Versuch. Maximal ' + CONFIG.LIVES_CAP + ' auf einmal.',
       owned: p.lives + ' / ' + CONFIG.LIVES_CAP,
@@ -740,8 +798,7 @@
 
     var icon = doc.createElement('span');
     icon.className = 'shop__icon';
-    if (spec.art) icon.appendChild(Icons.element(spec.art, 34, 'shop__art'));
-    else icon.textContent = spec.icon;
+    icon.appendChild(Icons.element(spec.art, 34, 'shop__art'));
 
     var name = doc.createElement('span');
     name.className = 'shop__name';
@@ -760,7 +817,8 @@
     var buy = doc.createElement('button');
     buy.className = 'shop__buy';
     buy.type = 'button';
-    buy.textContent = spec.price + ' 💎';
+    buy.appendChild(doc.createTextNode(spec.price));
+    buy.appendChild(Icons.element('crystal', 18, 'inline-art'));
     buy.disabled = !spec.affordable;
     buy.dataset.buy = spec.action;
 

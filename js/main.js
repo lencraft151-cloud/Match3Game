@@ -26,6 +26,7 @@
   var Map = root.M3.Map;
   var Tutorial = root.M3.Tutorial;
   var Rooms = root.M3.Rooms;
+  var Scene = root.M3.Scene;
   var Game = root.M3.Game;
   var COLORS = root.M3.GEM_COLORS;
 
@@ -171,37 +172,65 @@
     doc.documentElement.style.setProperty('--vh', root.innerHeight + 'px');
   }
 
-  /* Das Brett bekommt den Platz zwischen HUD, Power-Leiste und Fusszeile. */
+  var BOARD_MIN = 200;
+  var BOARD_MAX = 560;
+
+  /* Das Brett bekommt den Platz, den die Geschwister uebrig lassen. Welche
+     das sind, wird nicht aufgezaehlt, sondern gemessen: das Tutorial-Feld
+     hing frueher nicht in der Liste und wurde deshalb nicht mitgerechnet —
+     sobald es auftauchte, ragte der Screen oben und unten aus dem Fenster. */
   function layoutBoard() {
     var screen = doc.getElementById('screen-game');
-    var hud = doc.querySelector('.hud');
-    var bar = doc.getElementById('powerbar');
-    var foot = doc.querySelector('.game-foot');
-    if (!screen || !game) return;
+    var wrap = doc.querySelector('.board-wrap');
+    var frame = doc.getElementById('board-frame');
+    if (!screen || !wrap || !game) return;
 
     var style = root.getComputedStyle(screen);
     var padX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
     var padY = parseFloat(style.paddingTop) + parseFloat(style.paddingBottom);
-    var gaps = (parseFloat(style.rowGap || style.gap) || 10) * 3;
+    var gap = parseFloat(style.rowGap || style.gap) || 10;
 
-    var availableW = screen.clientWidth - padX;
-    var availableH = screen.clientHeight - padY - gaps -
-      (hud ? hud.offsetHeight : 0) -
-      (bar ? bar.offsetHeight : 0) -
-      (foot ? foot.offsetHeight : 0);
+    /* Alle sichtbaren Geschwister ausser dem Brett selbst. */
+    var used = 0;
+    var shown = 0;
+    Array.prototype.forEach.call(screen.children, function (el) {
+      if (el === wrap || el.hidden || el.offsetParent === null) return;
+      used += el.offsetHeight;
+      shown++;
+    });
 
-    var size = Math.min(availableW, availableH, 560);
-
-    if (!isFinite(size) || size < 40) {
-      size = Math.min(root.innerWidth - 32, root.innerHeight - 300, 560);
+    /* Der Rahmen legt sich um das Brett und braucht selbst Platz — samt der
+       Eckbeschlaege, die noch ein Stueck darueber hinausragen. Ohne diese
+       Rechnung waere das Brett so breit wie der Screen und der Rahmen liefe
+       links und rechts hinaus. */
+    var FRAME_BEAD = 8;
+    var frameExtra = FRAME_BEAD;
+    if (frame) {
+      var fs = root.getComputedStyle(frame);
+      frameExtra += parseFloat(fs.paddingLeft) + parseFloat(fs.paddingRight);
     }
 
-    game.resize(Utils.clamp(size, 200, 560));
+    var availableW = screen.clientWidth - padX - frameExtra;
+    var availableH = screen.clientHeight - padY - used - gap * shown - frameExtra;
+
+    var size = Math.min(availableW, availableH, BOARD_MAX);
+
+    if (!isFinite(size) || size < 40) {
+      size = Math.min(root.innerWidth - 32, root.innerHeight - 300, BOARD_MAX);
+    }
+
+    /* Reicht der Platz nicht fuer das Mindestmass, wird das Brett trotzdem
+       nicht kleiner — dann darf der Screen lieber scrollen, als dass oben
+       die Zuganzeige und unten der Erklaertext abgeschnitten werden. */
+    screen.classList.toggle('is-cramped', size < BOARD_MIN);
+
+    game.resize(Utils.clamp(size, BOARD_MIN, BOARD_MAX));
   }
 
   function onResize() {
     setViewportUnit();
     if (backdrop) backdrop.resize();
+    Scene.resize();
     layoutBoard();
     if (UI.current() === 'screen-map') Map.render(progressState.unlocked, progressState.stars);
   }
@@ -318,9 +347,11 @@
     },
 
     /* Das Brett wechselt je nach Level sein Gewand — der Rahmen drumherum
-       zieht mit, sonst sieht das Thema wie ein Fehler aus. */
+       und die Kulisse dahinter ziehen mit, sonst sieht das Thema wie ein
+       Fehler aus. */
     onTheme: function (theme) {
       UI.setBoardTheme(theme);
+      Scene.setTheme(theme.key);
     },
 
     onLevelComplete: function (data) {
@@ -471,7 +502,13 @@
     }
   }
 
-  function openShop(message) {
+  /* Wohin der Zurueck-Knopf des Shops fuehrt. Aus dem laufenden Level heraus
+     zurueck auf die Karte zu springen waere ein Levelabbruch — und den hat
+     niemand gewollt, der nur einen Booster nachkaufen wollte. */
+  var shopCameFrom = 'screen-map';
+
+  function openShop(message, from) {
+    shopCameFrom = from || 'screen-map';
     UI.renderShop();
     UI.setShopState(message || '', message ? 'warn' : null);
     UI.show('screen-shop');
@@ -516,11 +553,13 @@
        nichts kostet. */
     var free = Levels.isTutorial(activeLevel);
 
-    /* Leerer Vorrat darf nicht einfach wirkungslos verpuffen — sonst wirkt
-       der Knopf kaputt statt leer. */
+    /* Leerer Vorrat: der Knopf zeigt ein "+" und fuehrt genau dorthin, wo
+       Nachschub herkommt. Frueher stand hier nur ein Hinweis, und der
+       Spieler musste den Weg selbst finden. */
     if (!free && Player.countOf(key) <= 0) {
-      UI.setHint(Player.ITEMS[key].name + ' aufgebraucht — im Shop nachkaufen für ' +
-        Player.ITEMS[key].price + ' Kristalle', true);
+      Audio.denied();
+      openShop(Player.ITEMS[key].name + ' aufgebraucht — hier gibt es Nachschub.',
+        'screen-game');
       return;
     }
 
@@ -684,6 +723,12 @@
     /* --- Shop --- */
     on('btn-shop-back', function () {
       UI.refreshWallet();
+      if (shopCameFrom === 'screen-game') {
+        UI.refreshPowerBar();
+        UI.show('screen-game');
+        layoutBoard();
+        return;
+      }
       openMap();
     });
 
@@ -750,6 +795,11 @@
     backdrop.update(Math.min(dt, 0.05));
     backdrop.draw();
 
+    /* Die Kulisse wird nur neu gesetzt, solange ein Uebergang laeuft — sonst
+       steht sie einfach und kostet nichts. */
+    Scene.update(Math.min(dt, 0.05));
+    Scene.draw();
+
     game.update(dt);
     game.render(clock);
 
@@ -763,6 +813,11 @@
   function boot() {
     root.M3.__bootAt = Date.now();
     Player.load();
+
+    /* Vor UI.init(): dort faellt der erste Screenwechsel, und der schaltet
+       die Kulisse schon an oder aus. */
+    Scene.attach(doc.getElementById('scene-canvas'));
+
     UI.init();
 
     backdrop = new Backdrop(doc.getElementById('bg-canvas'));
@@ -794,6 +849,19 @@
     root.addEventListener('orientationchange', function () {
       root.setTimeout(onResize, 120);
     });
+
+    /* Das Erklaerfeld im Uebungslevel taucht mitten im Level auf und ist bei
+       jedem Schritt unterschiedlich hoch — ein langer Text braucht drei
+       Zeilen, ein kurzer eine. Die Brettgroesse muss darauf reagieren.
+
+       Einmal beim Einblenden nachzurechnen reicht deshalb nicht, und an
+       jede Stelle, die den Text setzt, einen Aufruf zu haengen waere eine
+       Liste, die man vergisst. Beobachtet wird stattdessen das Feld selbst:
+       aendert sich seine Hoehe, wird das Brett neu vermessen. */
+    var bubble = doc.getElementById('tutorial');
+    if (bubble && typeof root.ResizeObserver === 'function') {
+      new root.ResizeObserver(function () { layoutBoard(); }).observe(bubble);
+    }
 
     doc.addEventListener('visibilitychange', function () {
       if (doc.hidden && game.running && !game.paused && UI.current() === 'screen-game') {

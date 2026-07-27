@@ -206,7 +206,320 @@
     arrowHead(ctx, 0.62, 0.86, 1, 0);
   }
 
-  var ART = { rocket: rocket, bomb: bomb, moves: moves, shuffle: shuffle };
+  /* Herz: das Leben. Stand vorher als Emoji zwischen lauter gezeichneten
+     Symbolen und war das einzige, das nach Aufkleber aussah. */
+  function heart(ctx) {
+    var grad = ctx.createLinearGradient(0, -0.8, 0, 0.9);
+    grad.addColorStop(0, '#ff8fa0');
+    grad.addColorStop(0.45, '#ff4f68');
+    grad.addColorStop(1, '#b8203c');
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(0, 0.88);
+    ctx.bezierCurveTo(-0.95, 0.16, -0.78, -0.82, -0.3, -0.82);
+    ctx.bezierCurveTo(-0.1, -0.82, 0, -0.6, 0, -0.44);
+    ctx.bezierCurveTo(0, -0.6, 0.1, -0.82, 0.3, -0.82);
+    ctx.bezierCurveTo(0.78, -0.82, 0.95, 0.16, 0, 0.88);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(90, 8, 26, 0.5)';
+    ctx.lineWidth = 0.09;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+    ctx.beginPath();
+    ctx.ellipse(-0.34, -0.34, 0.17, 0.1, -0.72, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  /* Kristall: die Waehrung. Ein geschliffener Stein mit sichtbaren Facetten,
+     damit er neben den Steinen auf dem Brett nicht abfaellt. */
+  function crystal(ctx) {
+    var body = ctx.createLinearGradient(-0.7, -0.7, 0.7, 0.9);
+    body.addColorStop(0, '#eaf9ff');
+    body.addColorStop(0.4, '#7fd8ff');
+    body.addColorStop(1, '#1f7fc4');
+
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.moveTo(0, -0.86);
+    ctx.lineTo(0.82, -0.22);
+    ctx.lineTo(0, 0.9);
+    ctx.lineTo(-0.82, -0.22);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Schliff: helle Tafel links, dunklere rechts. */
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.beginPath();
+    ctx.moveTo(0, -0.86);
+    ctx.lineTo(0, 0.9);
+    ctx.lineTo(-0.82, -0.22);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(10, 60, 105, 0.28)';
+    ctx.beginPath();
+    ctx.moveTo(0, -0.86);
+    ctx.lineTo(0.82, -0.22);
+    ctx.lineTo(0.3, 0.28);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(8, 44, 82, 0.55)';
+    ctx.lineWidth = 0.09;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(0, -0.86);
+    ctx.lineTo(0.82, -0.22);
+    ctx.lineTo(0, 0.9);
+    ctx.lineTo(-0.82, -0.22);
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  /* Muenze fuer das Schloss. */
+  function coin(ctx) {
+    var face = ctx.createLinearGradient(-0.6, -0.7, 0.6, 0.8);
+    face.addColorStop(0, '#ffeead');
+    face.addColorStop(0.5, '#ffc93c');
+    face.addColorStop(1, '#b3760a');
+
+    ctx.fillStyle = face;
+    ctx.beginPath();
+    ctx.arc(0, 0, 0.86, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(120, 76, 4, 0.6)';
+    ctx.lineWidth = 0.12;
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 0.08;
+    ctx.beginPath();
+    ctx.arc(0, 0, 0.6, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.beginPath();
+    ctx.ellipse(-0.32, -0.36, 0.2, 0.11, -0.7, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  /* Plus: sitzt in der Anzahl-Blase, wenn ein Booster leer ist. */
+  function plus(ctx) {
+    ctx.fillStyle = '#ffffff';
+    var a = 0.2;
+    var b = 0.72;
+    ctx.beginPath();
+    ctx.moveTo(-a, -b); ctx.lineTo(a, -b); ctx.lineTo(a, -a);
+    ctx.lineTo(b, -a); ctx.lineTo(b, a); ctx.lineTo(a, a);
+    ctx.lineTo(a, b); ctx.lineTo(-a, b); ctx.lineTo(-a, a);
+    ctx.lineTo(-b, a); ctx.lineTo(-b, -a); ctx.lineTo(-a, -a);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /* Zahnrad fuer die Pause — das Symbol, das jedes Spiel oben rechts hat.
+
+     Der Umriss laeuft in gleichmaessigen Schritten um den Mittelpunkt und
+     springt dabei zwischen zwei Radien hin und her. Jeder Zahn besteht so
+     aus vier Punkten und sitzt genau dort, wo er hingehoert; von Hand
+     gesetzte Winkel je Zahn ergaben nur einen Klecks. */
+  function gear(ctx) {
+    var teeth = 8;
+    var step = Math.PI / teeth;   /* halber Zahn */
+    var outer = 0.95;
+    var inner = 0.66;
+
+    ctx.fillStyle = '#e8f0ff';
+    ctx.beginPath();
+    for (var i = 0; i < teeth * 2; i++) {
+      var r = i % 2 === 0 ? outer : inner;
+      var a = i * step;
+      /* Die Zahnflanken etwas einziehen, damit die Zaehne trapezfoermig
+         werden statt dreieckig. */
+      var lead = a - step * (i % 2 === 0 ? 0.34 : -0.34);
+      var trail = a + step * (i % 2 === 0 ? 0.34 : -0.34);
+
+      ctx[i ? 'lineTo' : 'moveTo'](Math.cos(lead) * r, Math.sin(lead) * r);
+      ctx.lineTo(Math.cos(trail) * r, Math.sin(trail) * r);
+    }
+    ctx.closePath();
+    ctx.fill();
+
+    /* Loch in der Mitte — ohne das ist es eine Sonne, kein Zahnrad. */
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(0, 0, 0.32, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  /* Das Schloss — der Knopf, der zum Einrichten fuehrt. */
+  function castle(ctx) {
+    ctx.fillStyle = '#8fa8d8';
+    /* Zinnen ueber dem Hauptbau. */
+    var x = -0.62;
+    ctx.beginPath();
+    ctx.moveTo(-0.62, 0.8);
+    ctx.lineTo(-0.62, -0.3);
+    for (var i = 0; i < 5; i++) {
+      x = -0.62 + i * 0.248;
+      ctx.lineTo(x, -0.3);
+      ctx.lineTo(x, i % 2 === 0 ? -0.62 : -0.3);
+      ctx.lineTo(x + 0.248, i % 2 === 0 ? -0.62 : -0.3);
+      ctx.lineTo(x + 0.248, -0.3);
+    }
+    ctx.lineTo(0.62, 0.8);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Tor. */
+    ctx.fillStyle = '#2f4680';
+    ctx.beginPath();
+    ctx.moveTo(-0.19, 0.8);
+    ctx.lineTo(-0.19, 0.16);
+    ctx.quadraticCurveTo(0, -0.08, 0.19, 0.16);
+    ctx.lineTo(0.19, 0.8);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Fahne auf dem mittleren Turm. */
+    ctx.strokeStyle = '#dfe9ff';
+    ctx.lineWidth = 0.07;
+    ctx.beginPath();
+    ctx.moveTo(0, -0.62);
+    ctx.lineTo(0, -1);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ff5a6e';
+    ctx.beginPath();
+    ctx.moveTo(0.03, -1);
+    ctx.lineTo(0.48, -0.86);
+    ctx.lineTo(0.03, -0.72);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /* Einkaufswagen fuer den Shop. */
+  function cart(ctx) {
+    ctx.strokeStyle = '#dfe9ff';
+    ctx.lineWidth = 0.15;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    ctx.beginPath();
+    ctx.moveTo(-0.86, -0.66);
+    ctx.lineTo(-0.5, -0.66);
+    ctx.lineTo(-0.2, 0.34);
+    ctx.lineTo(0.62, 0.34);
+    ctx.stroke();
+
+    /* Der Korb. */
+    ctx.fillStyle = '#ffc93c';
+    ctx.beginPath();
+    ctx.moveTo(-0.44, -0.36);
+    ctx.lineTo(0.86, -0.36);
+    ctx.lineTo(0.66, 0.16);
+    ctx.lineTo(-0.28, 0.16);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.fillStyle = '#dfe9ff';
+    ctx.beginPath(); ctx.arc(-0.08, 0.7, 0.17, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0.52, 0.7, 0.17, 0, Math.PI * 2); ctx.fill();
+  }
+
+  /* Pokal fuer die Bestenliste. */
+  function trophy(ctx) {
+    ctx.fillStyle = '#ffc93c';
+    ctx.beginPath();
+    ctx.moveTo(-0.46, -0.82);
+    ctx.lineTo(0.46, -0.82);
+    ctx.lineTo(0.4, -0.18);
+    ctx.quadraticCurveTo(0.32, 0.16, 0, 0.2);
+    ctx.quadraticCurveTo(-0.32, 0.16, -0.4, -0.18);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Henkel. */
+    ctx.strokeStyle = '#e0a416';
+    ctx.lineWidth = 0.13;
+    ctx.beginPath();
+    ctx.arc(-0.56, -0.5, 0.24, Math.PI * 0.4, Math.PI * 1.6);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0.56, -0.5, 0.24, Math.PI * 1.4, Math.PI * 0.6);
+    ctx.stroke();
+
+    /* Fuss. */
+    ctx.fillStyle = '#e0a416';
+    roundRect(ctx, -0.12, 0.18, 0.24, 0.36, 0.04);
+    ctx.fill();
+    roundRect(ctx, -0.44, 0.54, 0.88, 0.26, 0.08);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+    ctx.beginPath();
+    ctx.ellipse(-0.18, -0.5, 0.09, 0.2, 0.1, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  /* Fragezeichen fuer die Anleitung. */
+  function help(ctx) {
+    ctx.strokeStyle = '#e8f0ff';
+    ctx.lineWidth = 0.22;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(0, -0.34, 0.36, Math.PI, Math.PI * 2.1);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0.33, -0.18);
+    ctx.quadraticCurveTo(0.2, 0.1, 0, 0.22);
+    ctx.stroke();
+
+    ctx.fillStyle = '#e8f0ff';
+    ctx.beginPath();
+    ctx.arc(0, 0.68, 0.15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  /* Stern fuer die Landkarte. Gefuellt heisst verdient, leer heisst offen.
+
+     Nicht der `star()`-Helfer von unten: der hat vier Zacken und ist als
+     Funke an der Zuendschnur gedacht. Ein verdienter Stern hat fuenf. */
+  function starIcon(ctx) {
+    ctx.beginPath();
+    for (var i = 0; i < 10; i++) {
+      var rad = i % 2 === 0 ? 0.95 : 0.42;
+      var angle = (Math.PI / 5) * i - Math.PI / 2;
+      ctx[i ? 'lineTo' : 'moveTo'](Math.cos(angle) * rad, Math.sin(angle) * rad + 0.06);
+    }
+    ctx.closePath();
+
+    var grad = ctx.createLinearGradient(0, -0.9, 0, 0.9);
+    grad.addColorStop(0, '#fff0b8');
+    grad.addColorStop(0.5, '#ffc93c');
+    grad.addColorStop(1, '#d18f04');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(90, 52, 0, 0.65)';
+    ctx.lineWidth = 0.12;
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+  }
+
+  var ART = {
+    rocket: rocket, bomb: bomb, moves: moves, shuffle: shuffle,
+    heart: heart, crystal: crystal, coin: coin, plus: plus, gear: gear,
+    castle: castle, cart: cart, trophy: trophy, help: help, star: starIcon
+  };
 
   /* ------------------------------------------------------------- Hilfsformen */
 

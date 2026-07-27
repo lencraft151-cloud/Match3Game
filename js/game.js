@@ -154,6 +154,12 @@
 
   Game.COLORS = COLORS;
 
+  /* Offen, damit die Kulisse (js/scene.js) und der Test dieselbe Tabelle
+     benutzen koennen. Ein zweites Verzeichnis der Themen waere genau die
+     Sorte Kopie, die irgendwann auseinanderlaeuft. */
+  Game.THEMES = THEMES;
+  Game.themeFor = themeFor;
+
   /* ====================================================================== */
   /*  Layout                                                                */
   /* ====================================================================== */

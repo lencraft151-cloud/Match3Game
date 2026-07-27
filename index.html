@@ -34,6 +34,10 @@
 </div>
 
 <canvas id="bg-canvas" aria-hidden="true"></canvas>
+<!-- Die Kulisse liegt ueber dem Verlauf und unter allem anderen. Sie ist
+     nur beim Spielen sichtbar; auf Titel, Karte und Shop bleibt es beim
+     ruhigen Verlauf. -->
+<canvas id="scene-canvas" aria-hidden="true"></canvas>
 <div id="vignette" aria-hidden="true"></div>
 
 <!-- ============================ TITEL ============================ -->
@@ -62,19 +66,20 @@
       <span class="hearts" id="hearts"></span>
       <span class="topbar__sub" id="lives-note">Voll</span>
     </div>
-    <div class="topbar__stat topbar__stat--coins">
-      <span class="coin">&#128142;</span>
+    <!-- Die Symbole setzt js/ui.js als gezeichnete Bilder ein. Sie stehen
+         nicht als Emoji im HTML, weil die auf jedem Geraet anders aussehen
+         und neben den selbstgezeichneten Steinen wie Aufkleber wirken. -->
+    <div class="topbar__stat topbar__stat--coins" id="crystal-stat">
       <strong id="crystals">0</strong>
     </div>
-    <div class="topbar__stat topbar__stat--gold">
-      <span class="coin coin--gold" aria-hidden="true"></span>
+    <div class="topbar__stat topbar__stat--gold" id="coin-stat">
       <strong id="coins">0</strong>
     </div>
     <div class="topbar__actions">
-      <button class="icon-btn icon-btn--rooms" id="btn-rooms" title="Schloss einrichten" aria-label="Schloss einrichten">&#127968;</button>
-      <button class="icon-btn" id="btn-shop" title="Shop" aria-label="Shop">&#128722;</button>
-      <button class="icon-btn" id="btn-scores" title="Bestenliste" aria-label="Bestenliste">&#127942;</button>
-      <button class="icon-btn" id="btn-map-help" title="Anleitung" aria-label="Anleitung">?</button>
+      <button class="icon-btn icon-btn--rooms" id="btn-rooms" title="Schloss einrichten" aria-label="Schloss einrichten"></button>
+      <button class="icon-btn" id="btn-shop" title="Shop" aria-label="Shop"></button>
+      <button class="icon-btn" id="btn-scores" title="Bestenliste" aria-label="Bestenliste"></button>
+      <button class="icon-btn" id="btn-map-help" title="Anleitung" aria-label="Anleitung"></button>
     </div>
   </header>
 
@@ -91,19 +96,32 @@
   <header class="hud">
     <div class="hud__row">
       <div class="moves" id="moves-box">
-        <span class="moves__value" id="hud-moves">25</span>
+        <span class="moves__level" id="hud-level">Level 1</span>
+        <span class="moves__value outlined" id="hud-moves">25</span>
         <span class="moves__label">Züge</span>
       </div>
 
       <ul class="goals" id="goal-list"></ul>
 
-      <button class="icon-btn" id="btn-pause" title="Pause" aria-label="Pause">&#10073;&#10073;</button>
+      <button class="icon-btn icon-btn--gear" id="btn-pause" title="Pause" aria-label="Pause"></button>
     </div>
   </header>
 
   <div class="board-wrap">
-    <canvas id="board-canvas" role="application" tabindex="0"
-            aria-label="Spielfeld. Mit Pfeiltasten bewegen, Leertaste zum Auswählen und Tauschen."></canvas>
+    <!-- Der Rahmen ist ein eigenes Element und nicht der Rand des Canvas:
+         so kann er dicker und verzierter sein, ohne dass sich die Flaeche
+         verschiebt, auf der das Spiel die Treffer ausrechnet. -->
+    <div class="board-frame" id="board-frame">
+      <canvas id="board-canvas" role="application" tabindex="0"
+              aria-label="Spielfeld. Mit Pfeiltasten bewegen, Leertaste zum Auswählen und Tauschen."></canvas>
+      <span class="board-frame__foot" aria-hidden="true"></span>
+    </div>
+
+    <!-- Der Hinweis blendet sich ueber dem unteren Brettrand ein und wieder
+         aus. Er liegt bewusst *im* Brettbereich: als eigenes Kind des
+         Screens haette er beim Ausrechnen der Brettgroesse Platz belegt,
+         auch wenn er unsichtbar ist. -->
+    <p class="hint" id="game-hint" role="status" aria-live="polite"></p>
   </div>
 
   <!-- Die Karten baut js/ui.js aus Player.ITEMS, damit Name, Wirkung und
@@ -116,9 +134,6 @@
     <button class="btn btn--primary tutorial__next" id="tutorial-next" type="button">Weiter</button>
   </div>
 
-  <footer class="game-foot">
-    <span class="hint" id="game-hint">Ziehe oder tippe zwei benachbarte Steine</span>
-  </footer>
 </section>
 
 <!-- ======================== LEVEL-START ========================== -->
@@ -150,8 +165,8 @@
     <div class="ribbon">Pause</div>
     <div class="menu">
       <button class="btn btn--primary" id="btn-resume">Weiter</button>
-      <button class="btn" id="btn-restart">Neu starten <span class="btn__cost">1 ❤</span></button>
-      <button class="btn btn--quiet" id="btn-quit">Aufgeben <span class="btn__cost">1 ❤</span></button>
+      <button class="btn" id="btn-restart">Neu starten <span class="btn__cost">1<span class="cost-icon" data-icon="heart"></span></span></button>
+      <button class="btn btn--quiet" id="btn-quit">Aufgeben <span class="btn__cost">1<span class="cost-icon" data-icon="heart"></span></span></button>
     </div>
   </div>
 </section>
@@ -188,7 +203,7 @@
     <div class="continue" id="continue-box">
       <p class="continue__text">Weiterspielen mit <strong id="continue-moves">5</strong> Zügen?</p>
       <button class="btn btn--primary btn--big" id="btn-continue-buy">
-        <span id="continue-price">40</span> &#128142;
+        <span id="continue-price">40</span><span class="cost-icon" data-icon="crystal"></span>
       </button>
       <p class="continue__state" id="continue-state"></p>
     </div>
@@ -197,7 +212,7 @@
       <button class="btn" id="btn-fail-retry">Nochmal</button>
       <button class="btn btn--quiet" id="btn-fail-map">Karte</button>
     </div>
-    <p class="fail__cost">Aufgeben kostet ein Leben &#10084;&#65039;</p>
+    <p class="fail__cost">Aufgeben kostet ein Leben<span class="cost-icon" data-icon="heart"></span></p>
   </div>
 </section>
 
@@ -211,6 +226,8 @@
     <div class="room__stage">
       <canvas class="room__canvas" id="room-canvas"
               role="img" aria-label="Dein Zimmer"></canvas>
+      <!-- Steht unter der Zeichenflaeche, nicht darauf: darauf hat sie den
+           Boden-Platzhalter zugedeckt. -->
       <div class="room__nav">
         <button class="icon-btn" id="btn-room-prev" title="Vorheriges Zimmer"
                 aria-label="Vorheriges Zimmer">&#8249;</button>
@@ -245,7 +262,7 @@
   <div class="panel panel--wide">
     <div class="ribbon">Shop</div>
     <p class="shop__balance">
-      Guthaben: <strong id="shop-crystals">0</strong> &#128142;
+      Guthaben: <strong id="shop-crystals">0</strong><span class="cost-icon" data-icon="crystal"></span>
       <span class="shop__hint">Kristalle gibt es für jedes geschaffte Level.</span>
     </p>
 
@@ -306,11 +323,12 @@
     <h3 class="panel__sub">Leben, Kristalle, Power-Ups</h3>
     <ul class="rules">
       <li><b>Leben:</b> Du hast <b id="help-lives">5</b>. Ein verlorenes Level kostet eines; alle 30 Minuten wächst eines nach, und um Mitternacht sind alle wieder da.</li>
-      <li><b>Kristalle &#128142;:</b> Gibt es für jedes geschaffte Level &mdash; mehr Sterne, mehr Kristalle. Im Shop kaufst du dafür Leben und Power-Ups.</li>
-      <li><b>&#128296; Hammer:</b> Erst den Knopf antippen, dann ein Feld auf dem Brett &mdash; dieses Feld <b>und seine vier Nachbarn</b> fliegen raus, Felsen inklusive. Nochmal auf den Knopf tippen bricht ab.</li>
-      <li><b>&#128256; Mischen:</b> Würfelt das Feld neu und stellt sicher, dass danach mindestens vier Züge möglich sind.</li>
-      <li><b>&#10133; Extra-Züge:</b> Legt 7 Züge drauf.</li>
-      <li><b>Wichtig:</b> Power-Ups kosten selbst <b>keinen Zug</b>. Ist der Vorrat leer, sagt dir das Spiel unter dem Brett Bescheid.</li>
+      <li><b>Kristalle:</b> Gibt es für jedes geschaffte Level &mdash; mehr Sterne, mehr Kristalle. Im Shop kaufst du dafür Leben und Booster.</li>
+      <li><b>Rakete:</b> Antippen, dann ein Feld auf dem Brett wählen &mdash; die Rakete fegt eine ganze Reihe oder Spalte leer.</li>
+      <li><b>Bombe:</b> Antippen, dann ein Feld wählen &mdash; dieses Feld <b>und alle acht Nachbarn</b> fliegen raus, Felsen inklusive.</li>
+      <li><b>Extra-Züge:</b> Legt 7 Züge drauf.</li>
+      <li><b>Mischen:</b> Würfelt das Feld neu und stellt sicher, dass danach mindestens vier Züge möglich sind.</li>
+      <li><b>Wichtig:</b> Booster kosten selbst <b>keinen Zug</b>. Ist der Vorrat leer, zeigt der Knopf ein <b>+</b> und führt in den Shop. Nochmal auf den Knopf tippen bricht das Zielen ab.</li>
     </ul>
 
     <p class="rules__note">Tastatur: Pfeiltasten bewegen, Leertaste wählt aus und tauscht, <kbd>P</kbd> pausiert.</p>
@@ -330,6 +348,7 @@
 <script src="js/leaderboard.js"></script>
 <script src="js/rooms.js"></script>
 <script src="js/roomart.js"></script>
+<script src="js/scene.js"></script>
 <script src="js/game.js"></script>
 <script src="js/map.js"></script>
 <script src="js/tutorial.js"></script>

@@ -155,28 +155,33 @@
 
   /* Ein gestrichelter Platzhalter, wo noch nichts steht.
 
-     `aspect` ist Breite durch Hoehe des Canvas. Das Koordinatensystem geht
-     in beide Richtungen von 0 bis 1, skaliert x aber staerker als y — eine
-     Schrift darin waere in die Breite gezogen. Vor dem Text wird die
-     y-Achse deshalb nachskaliert, bis beide Achsen gleich stehen. */
-  function placeholder(ctx, x, y, w, h, label, aspect) {
+     Der Rest der Datei zeichnet in 0..1, und das Koordinatensystem streckt
+     x und y unterschiedlich weit — fuer Flaechen und Verlaeufe ist das
+     genau richtig, fuer Striche und Schrift nicht: eine Linie waere in
+     einer Richtung dicker als in der anderen, und der Text bekaeme die
+     Glyphenhoehe der einen Achse mit den Buchstabenabstaenden der anderen.
+     Buchstaben liegen dann uebereinander.
+
+     Deshalb rechnet der Platzhalter als einziger in Pixeln. `px` bringt
+     mit, was dafuer fehlt: Geraetefaktor und Canvasgroesse. */
+  function placeholder(ctx, x, y, w, h, label, px) {
+    var s = Math.min(px.w, px.h);
+
     ctx.save();
-    ctx.setLineDash([0.022, 0.02]);
+    ctx.setTransform(px.dpr, 0, 0, px.dpr, 0, 0);
+
+    ctx.setLineDash([s * 0.028, s * 0.024]);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.42)';
-    ctx.lineWidth = 0.008;
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    ctx.stroke();
+    ctx.lineWidth = Math.max(1, s * 0.008);
+    ctx.strokeRect(x * px.w, y * px.h, w * px.w, h * px.h);
     ctx.setLineDash([]);
 
-    ctx.translate(x + w / 2, y + h / 2);
-    ctx.scale(1, aspect || 1);
-
     ctx.fillStyle = 'rgba(255, 255, 255, 0.62)';
-    ctx.font = '700 0.038px "Segoe UI", system-ui, sans-serif';
+    ctx.font = '700 ' + Math.round(s * 0.055) + 'px "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label || '?', 0, 0);
+    ctx.fillText(label || '?', (x + w / 2) * px.w, (y + h / 2) * px.h);
+
     ctx.restore();
   }
 
@@ -1216,7 +1221,8 @@
       if (picks[task.key]) return;
       var spot = SPOTS[task.key];
       if (!spot) return;
-      placeholder(ctx, spot[0], spot[1], spot[2], spot[3], spot[4], width / height);
+      placeholder(ctx, spot[0], spot[1], spot[2], spot[3], spot[4],
+        { dpr: dpr, w: width, h: height });
     });
 
     /* Ein Hauch Vignette bindet die Schichten zusammen. */
@@ -1250,7 +1256,15 @@
 
   RoomArt.HORIZON = HORIZON;
 
+  /* Die Bausteine liegen offen, damit die Kulisse hinter dem Spielfeld
+     (js/scene.js) dieselben Waende, Boeden, Lichter und Moebel benutzen
+     kann. Sie zeichnen alle in 0..1 mit HORIZON als Trennlinie, also passen
+     sie ohne Umrechnung. */
+  RoomArt.LAYERS = LAYERS;
+
   root.M3 = root.M3 || {};
   root.M3.RoomArt = RoomArt;
+
+  if (typeof module !== 'undefined' && module.exports) module.exports = RoomArt;
 
 })(typeof globalThis !== 'undefined' ? globalThis : this);

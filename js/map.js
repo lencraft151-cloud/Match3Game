@@ -14,6 +14,7 @@
   'use strict';
 
   var doc = root.document;
+  var Icons = root.M3.Icons;
 
   var Map = {};
 
@@ -154,11 +155,13 @@
 
     if (done) wrap.appendChild(starRow(earned));
     if (current) {
-      var crown = doc.createElement('span');
-      crown.className = 'node__crown';
-      crown.textContent = '👑';
-      crown.setAttribute('aria-hidden', 'true');
-      wrap.appendChild(crown);
+      /* Ein huepfender Zeiger auf dem naechsten Level. Frueher stand hier
+         eine Krone als Emoji — die sah auf jedem Geraet anders aus und
+         bedeutete ausserdem nichts: "hier gehts weiter" ist keine Krone. */
+      var pointer = doc.createElement('span');
+      pointer.className = 'node__pointer';
+      pointer.setAttribute('aria-hidden', 'true');
+      wrap.appendChild(pointer);
     }
 
     return wrap;
@@ -172,7 +175,7 @@
     for (var i = 1; i <= 3; i++) {
       var star = doc.createElement('span');
       star.className = 'node__star' + (i <= earned ? ' is-on' : '');
-      star.textContent = '★';
+      star.appendChild(Icons.element('star', 15, 'node__star-art'));
       row.appendChild(star);
     }
     return row;

@@ -50,6 +50,9 @@ jobs:
       - name: Zimmer und Muenzen
         run: node test/rooms.test.js
 
+      - name: Kulissen hinter dem Spielfeld
+        run: node test/scene.test.js
+
   deploy:
     name: Veroeffentlichen
     needs: test
@@ -86,6 +89,7 @@ jobs:
           missing=""
           for f in index.html manifest.webmanifest sw.js .nojekyll \
                    css/style.css js/main.js js/rooms.js js/icons.js \
+                   js/scene.js js/roomart.js \
                    icons/icon-192.png icons/icon-512.png \
                    download/index.html download/GemCascade.apk \
                    download/GemCascade.mobileconfig; do
